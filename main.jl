@@ -67,6 +67,7 @@ SSVarbls = SteadyState_Variables()
 # ------------------------------------------------------------------------------
 # 03.  PS 01.ex3) Fixed grid:
 nk = 200
+println(" Started value function iteration... ")
 @time mVF, mPolicyFn, vGridK = ex3.a_fixed_grid(econparams, SSVarbls,nk)
 # ------------------------------------------------------------------------------
 # 04. Graphs 03.03 Value Functions:
