@@ -1,8 +1,8 @@
 module ex3
-export a_fixed_grid
+export a_fixed_grid_optimized
 using Parameters, LinearAlgebra, Interpolations
 
-function a_fixed_grid(economy, steadyStateValues,Vinit,nK)
+function a_fixed_grid_optimized(economy, steadyStateValues,Vinit,nK)
 
     # 0. Get (unpack) the parameters back
     @unpack vGridZ, vGridA,mTranstnZ,mTranstnA, mTranstnZA,α,β,δ,θ,maxiter = economy
@@ -49,7 +49,16 @@ function a_fixed_grid(economy, steadyStateValues,Vinit,nK)
         return LOne, LTwo
     end
 
-    function val_provisional(gridK::Real, gridKNext::Real, gridProdZ::Real, gridProdA::Real, guess1::Real, guess2::Real, eV::Real, econ)
+    function getLabourOrReturnGuess(gridK, gridKNext, gridProdZ, gridProdA, guess1, guess2,α,β,δ,θ,eZ)
+        laborOne, laborTwo = try
+            labour_choice(gridK, gridKNext, gridProdZ, gridProdA, guess1, guess2,α,β,δ,θ,eZ)
+        catch  #make labor = 0 if there is no solution
+            guess1, guess2
+        end
+        return laborOne, laborTwo
+    end
+
+    function val_provisional(gridK::Real, gridKNext::Real, gridProdZ::Real, gridProdA::Real, laborOne::Real, laborTwo::Real, eV::Real, econ)
         # Function gets l1,l2
         #       (and the continuation value given k,k' l1(k,k'),l2(k,k'))
 
@@ -57,18 +66,11 @@ function a_fixed_grid(economy, steadyStateValues,Vinit,nK)
         @unpack α, β, δ, θ = econ
         eZ = exp(gridProdZ)
 
-        # Find Labor l1,l2 choices, found given K,K':
-        laborOne, laborTwo = try
-            labour_choice(gridK, gridKNext, gridProdZ, gridProdA, guess1, guess2,α,β,δ,θ,eZ)
-        catch  #make labor = 0 if there is no solution
-            guess1, guess2
-        end
-
-        # Get consumptions given the found labours
+        # Get consumptions given the labours
         c1 = eZ*gridK^α * laborOne^(1-α) + (1-δ) * gridK - gridKNext
         c2 = gridProdA * laborTwo
 
-        # 3. Value
+        # Continuation value
         if c1 < 0 || c2 < 0
             valueProvisional = -100000
         else
@@ -76,16 +78,30 @@ function a_fixed_grid(economy, steadyStateValues,Vinit,nK)
             valueProvisional = (1-β)*ut + β*eV
         end
 
-        return valueProvisional, laborOne, laborTwo
+        return valueProvisional
     end
 
     # Get utility(z,a,k) and labor(z,A,k,k') functions (matrices, actually)
     #    for all (z,A,k,k')
     #       to use in VFI to find V(z,A,k) and k'(z,A,k)
-    ml1 = zeros(nK,nZ,nA)
+    println(" Getting tensor of labors... ")
+    ml1 = -22*ones(nK,nK,nZ,nA)
+    ml2 = -22*ones(nK,nK,nZ,nA)
+    for iA in 1:nA
+        for iZ in 1:nZ
+            for iK in 1:nK
+                for iKNext in 1:nK
+                    eZ = exp(vGridZ[iZ])
+                    l1sol, l2sol = getLabourOrReturnGuess(vGridK[iK], vGridK[iKNext], vGridZ[iZ], vGridA[iA], l1ss, l2ss,α,β,δ,θ,eZ)
+                    ml1[iK,iKNext,iZ,iA] = l1sol
+                    ml2[iK,iKNext,iZ,iA] = l2sol
+                end
+            end
+        end
+    end
+    println(" Tensor of labors computed... ")
 
-
-
+    println(" VFI starts.... ")
     # VFI
     maxDiff = 10.0
     tol = 1.0e-6
@@ -111,9 +127,11 @@ function a_fixed_grid(economy, steadyStateValues,Vinit,nK)
 
                         eZ = exp(vGridZ[iZ])
                         #vProvisionalValues[iCapitalNext] = val_provisional(vGridCapital[iCapital], vGridCapital[iCapitalNext], vGridZ[iZ],vGridA[iA], expected, economy)
-                        guessL1 = l1ss#vGridK[iK]^(1-α)
-                        guessL2 = l2ss#vGridK[iK]^(1-α)
-                        vProvisional[iKNext], l1, l2 = val_provisional(vGridK[iK], vGridK[iKNext], vGridZ[iZ],vGridA[iA],guessL1, guessL2, expected, economy)
+                        L1solved = ml1[iK,iKNext,iZ,iA]#vGridK[iK]^(1-α)
+                        L2solved = ml2[iK,iKNext,iZ,iA]#vGridK[iK]^(1-α)
+                        vProvisional[iKNext] = val_provisional(vGridK[iK], vGridK[iKNext], vGridZ[iZ],vGridA[iA],L1solved, L2solved, expected, economy)
+                        #ml1[iK,iKNext,iZ,iA] = l1
+                        #ml2[iK,iKNext,iZ,iA] = l2
                         #guessL1 = l1
                         #guessL2 = l2
 

@@ -82,8 +82,9 @@ else
         vGridK = collect(range(0.7 * kss, 1.3 * kss, length = nk))
         mVinit = repeat(vGridK,1, nZ,nA)
 end
-println(" Started value function iteration... ")
-@time mVF, mPolicyFn, vGridK = ex3.a_fixed_grid(econparams, SSVarbls,mVinit,nk)
+println(" calling fixed grid optimized solution (03)... ")
+#@time mVF, mPolicyFn, vGridK = ex3.a_fixed_grid(econparams, SSVarbls,mVinit,nk)
+@time mVF, mPolicyFn, vGridK = ex3.a_fixed_grid_optimized(econparams, SSVarbls,mVinit,nk)
 # ------------------------------------------------------------------------------
 # 04. Graphs 03.03 Value Functions:
 pValueFunction = plot(vGridK, mVF[:,1,1],title="Value Function", label = "z_1, A_1", xlabel = "Capital",legend=:topleft)
