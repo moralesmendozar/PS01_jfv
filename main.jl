@@ -8,23 +8,17 @@
 # 0. init, packages, and modules
 println("Retrieving packages...")
 using Parameters, Plots, JLD2, JLD
-println("Packages gotten alright.")
+println("Packages gotten alright, getting modules...")
 cd("/home/moralesmendozar/Dropbox/03_UPenn/classes/2019_fall/00_714/partJesus/PS01_jfv")
 include("steadyState.jl")
 using .ss_deterministic
-println("SteadyState module ok")
 include("a_fixed_grid.jl")
 using .ex3
-println("Fixed Grid module ok")
 include("a_fixed_grid_optimized.jl")
 using .ex3b
-println("Fixed Grid Optim module ok")
 include("b_accelerator.jl")
 using .ex03b
-println("b_accelerator module ok")
-include("saveTest.jl")
-#using .test01
-#println("Save Test module ok")
+println(" modules loaded ok")
 # ------------------------------------------------------------------------------
 # 1. Set Parameters (building structure)
 econ_params = @with_kw (
@@ -83,8 +77,8 @@ SSVarbls = SteadyState_Variables()
 # ------------------------------------------------------------------------------
 # 03.  PS 01.ex3) Fixed grid:
 if doload == 1
-        @load "tmpfile.jld"
-        mVinit = mVF
+        #@load "tmpfile.jld"
+        #mVinit = mVF
 else
         @unpack kss = SSVarbls
         nk = 250
@@ -93,10 +87,10 @@ else
         vGridK = collect(range(0.7 * kss, 1.3 * kss, length = nk))
         mVinit = repeat(vGridK,1, nZ,nA)
 end
-println(" calling fixed grid optimized solution (03)... ")
+println(" calling accelerator... ")
 #@time mVF, mPolicyFn, vGridK = ex3.a_fixed_grid(econparams, SSVarbls,mVinit,nk)
-@time mVF, mPolicyFn, vGridK = ex3b.a_fixed_grid_optimized(econparams, SSVarbls,mVinit,nk,0,0,"OptimFunData.jld")
-#test01.saveTest(0,1,"OptimFunData.jld")
+#@time mVF, mPolicyFn, vGridK = ex3b.a_fixed_grid_optimized(econparams, SSVarbls,mVinit,nk,0,0,"OptimFunData.jld")
+@time mVF, mPolicyFn, vGridK = ex03b.b_accelerator(econparams, SSVarbls,mVinit,nk)
 # ------------------------------------------------------------------------------
 # 04. Graphs 03.03 Value Functions:
 pValueFunction = plot(vGridK, mVF[:,1,1],title="Value Function", label = "z_1, A_1", xlabel = "Capital",legend=:topleft)
@@ -104,14 +98,14 @@ plot!(vGridK, mVF[:,end,1], label = "z_5, A_1")
 plot!(vGridK, mVF[:,1,end], label = "z_1, A_5")
 plot!(vGridK, mVF[:,end,end], label = "z_5, A_3")
 #Save plots...
-savefig("Plots/001_ValueFunction_a_fixed_grid_optimized_20191129.png")
+savefig("Plots/000_ValueFunction_b_accelerator_20191129.png")
 # Graphs Policy Functions:
 pPolicyFunction =  plot(vGridK,vGridK,title="Policy Function", color=:black,linestyle=:dash)
 plot!(vGridK, mPolicyFn[:,1,1], label = "z_1, A_1", xlabel = "Capital", color=:blue)
 plot!(vGridK, mPolicyFn[:,end,1],label = "z_5, A_1", color=:blue, linestyle=:dash)
 plot!(vGridK, mPolicyFn[:,1,end], label = "z_1, A_5", color=:red)
 plot!(vGridK, mPolicyFn[:,end,end], color=:red, linestyle=:dash, label = "z_5, A_3")
-#savefig("Plots/001_PolicyFunction_a_fixed_grid_optimized_20191129.png")
+#savefig("Plots/000_PolicyFunction_b_accelerator_20191129.png")
 #plot(pValueFunction)
 #plot(pPolicyFunction)
 
