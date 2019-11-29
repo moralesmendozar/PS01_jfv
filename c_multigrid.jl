@@ -1,8 +1,8 @@
-module ex03b
-export b_accelerator
+module ex03c
+export c_multigrid
 using Parameters, LinearAlgebra, Interpolations, JLD2
 
-function b_accelerator(economy, steadyStateValues,Vinit,nK)
+function c_multigrid(economy, steadyStateValues,Vinit,nK)
     # 0. Get (unpack) the parameters back
     @unpack vGridZ, vGridA,mTranstnZ,mTranstnA, mTranstnZA,α,β,δ,θ,maxiter = economy
     @unpack kss, l1ss, l2ss = steadyStateValues

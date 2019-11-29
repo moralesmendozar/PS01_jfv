@@ -1,6 +1,6 @@
 module test01
 export saveTest
-using JLD2
+using JLD, JLD2
 
 function saveTest(doload,dosave,namsave)
   variableTest01 = 0.5
@@ -12,7 +12,8 @@ function saveTest(doload,dosave,namsave)
   end
   if dosave ==1
     println("saving...")
-    @save namsave
+    #@save namsave
+    save("/Data/", "key del dictionary", variable de cualquier tipo)
     println("variableTest01 = ", variableTest01)
   end
 end
