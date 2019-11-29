@@ -136,7 +136,6 @@ function fixed_grid(economy, steadyState)
                         end
 
                         vProvisionalValues[iCapitalNext], laborTwo, laborOne = value_provisional(vGridCapital[iCapital], vGridCapital[iCapitalNext], vGridZ[iZ],vGridA[iA],guess1, guess2, expected, economy)
-
                         guess1 = laborOne
                         guess2 = laborTwo
 

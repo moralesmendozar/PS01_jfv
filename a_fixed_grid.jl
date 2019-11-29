@@ -2,10 +2,10 @@ module ex3
 export a_fixed_grid
 using Parameters, LinearAlgebra, Interpolations
 
-function a_fixed_grid(economy, steadyStateValues,nK)
+function a_fixed_grid(economy, steadyStateValues,Vinit,nK)
 
     # 0. Get (unpack) the parameters back
-    @unpack vGridZ, vGridA,mTranstnZ,mTranstnA, mTranstnZA,α,β,δ,θ = economy
+    @unpack vGridZ, vGridA,mTranstnZ,mTranstnA, mTranstnZA,α,β,δ,θ,maxiter = economy
     @unpack kss, l1ss, l2ss = steadyStateValues
     nZ = length(vGridZ)
     nA = length(vGridA)
@@ -15,7 +15,9 @@ function a_fixed_grid(economy, steadyStateValues,nK)
 
     # Pre-allocation
     #   Create empty matrices where to record results (to return also) (:)
-    tVF = zeros(nK,nZ,nA)
+    #tVF = zeros(nK,nZ,nA)
+    #tVF = repeat(vGridK, nZ,nA)
+    tVF = Vinit
     tVFNew = zeros(nK,nZ,nA)
     tPolicyFnIndx = zeros(Int64,nK,nZ,nA)
     vProvisional = zeros(nK)
@@ -59,7 +61,7 @@ function a_fixed_grid(economy, steadyStateValues,nK)
         laborOne, laborTwo = try
             labour_choice(gridK, gridKNext, gridProdZ, gridProdA, guess1, guess2,α,β,δ,θ,eZ)
         catch  #make labor = 0 if there is no solution
-            0, 0
+            guess1, guess2
         end
 
         # Get consumptions given the found labours
@@ -67,8 +69,8 @@ function a_fixed_grid(economy, steadyStateValues,nK)
         c2 = gridProdA * laborTwo
 
         # 3. Value
-        if c1 <= 0 || c2 <= 0
-            valueProvisional = -10000.0
+        if c1 < 0 || c2 < 0
+            valueProvisional = -100000
         else
             ut = c1^θ*c2^(1-θ) - 0.5*(laborOne+laborTwo)^2
             valueProvisional = (1-β)*ut + β*eV
@@ -89,7 +91,7 @@ function a_fixed_grid(economy, steadyStateValues,nK)
     tol = 1.0e-6
     iteration = 0
 
-    while(maxDiff > tol)
+    while(maxDiff > tol && iteration<maxiter)
 
         itp = interpolate((vGridK, vGridZ, vGridA), tVF, Gridded(Linear()))
         tVFInterpol = itp(vGridK, vGridZ,vGridA)
@@ -103,14 +105,14 @@ function a_fixed_grid(economy, steadyStateValues,nK)
                         expected = 0.0
                         for iAnext in 1:nA
                             for iZnext in 1:nZ
-                                expected = expected + mTranstnZ[iZ, iZnext] * mTranstnA[iA, iAnext] * tVFInterpol[iKNext,iZnext,iAnext]
+                                expected = expected + mTranstnZ[iZ, iZnext] * mTranstnA[iA, iAnext] * tVF[iKNext,iZnext,iAnext]
                             end
                         end
 
                         eZ = exp(vGridZ[iZ])
                         #vProvisionalValues[iCapitalNext] = val_provisional(vGridCapital[iCapital], vGridCapital[iCapitalNext], vGridZ[iZ],vGridA[iA], expected, economy)
-                        guessL1 = vGridK[iK]^(1-α)
-                        guessL2 = vGridK[iK]^(1-α)
+                        guessL1 = l1ss#vGridK[iK]^(1-α)
+                        guessL2 = l2ss#vGridK[iK]^(1-α)
                         vProvisional[iKNext], l1, l2 = val_provisional(vGridK[iK], vGridK[iKNext], vGridZ[iZ],vGridA[iA],guessL1, guessL2, expected, economy)
                         #guessL1 = l1
                         #guessL2 = l2

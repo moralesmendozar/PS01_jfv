@@ -6,7 +6,9 @@
 # November, 2019
 # ------------------------------------------------------------------------------
 # 0. init, packages, and modules
-using Parameters, Plots
+println("Retrieving packages...")
+using Parameters, Plots, JLD2
+println("Packages gotten alright.")
 cd("/home/moralesmendozar/Dropbox/03_UPenn/classes/2019_fall/00_714/partJesus/PS01_jfv")
 include("steadyState.jl")
 using .ss_deterministic
@@ -19,6 +21,7 @@ econ_params = @with_kw (
                 β = 0.96,   # time discount
                 δ = 0.1,    # deprectn
                 θ = 0.5,    # elast subs tween goods
+                maxiter = 1000,
                 # Stochasticity
                 vGridZ    = [-0.0673, -0.0336,  0,      0.0336, 0.0673],
                 mTranstnZ = [ 0.9727  0.0273    0       0       0;
@@ -35,7 +38,9 @@ econ_params = @with_kw (
         )
 # once structure is built, call it to use in VFIs (fixed grid, etc...)
 econparams = econ_params()  #call function and get the relevant parameters 4 ss
-@unpack α, β, δ, θ = econparams
+dosave = 0
+doload = 0
+@unpack α, β, δ, θ, vGridZ, vGridA  = econparams
 # ------------------------------------------------------------------------------
 # 2. Steady State, solve for:
 xinit =  [0.5, 0.5, 1] #[0.2, 0.2, 0.8] #[0.5, 0.5, 1] #initial value to find ss
@@ -66,18 +71,35 @@ SteadyState_Variables = @with_kw (
 SSVarbls = SteadyState_Variables()
 # ------------------------------------------------------------------------------
 # 03.  PS 01.ex3) Fixed grid:
-nk = 200
+if doload == 1
+        @load "tmpfile.jld"
+        mVinit = mVF
+else
+        @unpack kss = SSVarbls
+        nk = 250
+        nZ = length(vGridZ)
+        nA = length(vGridA)
+        vGridK = collect(range(0.7 * kss, 1.3 * kss, length = nk))
+        mVinit = repeat(vGridK,1, nZ,nA)
+end
 println(" Started value function iteration... ")
-@time mVF, mPolicyFn, vGridK = ex3.a_fixed_grid(econparams, SSVarbls,nk)
+@time mVF, mPolicyFn, vGridK = ex3.a_fixed_grid(econparams, SSVarbls,mVinit,nk)
 # ------------------------------------------------------------------------------
 # 04. Graphs 03.03 Value Functions:
-pValueFunction = plot(vGridK, mVF[:,1,1], label = "z_1, A_1", xlabel = "Capital", legend=:topleft)
+pValueFunction = plot(vGridK, mVF[:,1,1],title="Value Function", label = "z_1, A_1", xlabel = "Capital",legend=:topleft)
 plot!(vGridK, mVF[:,end,1], label = "z_5, A_1")
 plot!(vGridK, mVF[:,1,end], label = "z_1, A_5")
 plot!(vGridK, mVF[:,end,end], label = "z_5, A_3")
 # Graphs Policy Functions:
-pPolicyFunction =  plot(vGridK,vGridK, color=:black,linestyle=:dash)
+pPolicyFunction =  plot(vGridK,vGridK,title="Policy Function", color=:black,linestyle=:dash)
 plot!(vGridK, mPolicyFn[:,1,1], label = "z_1, A_1", xlabel = "Capital", color=:blue)
 plot!(vGridK, mPolicyFn[:,end,1],label = "z_5, A_1", color=:blue, linestyle=:dash)
 plot!(vGridK, mPolicyFn[:,1,end], label = "z_1, A_5", color=:red)
 plot!(vGridK, mPolicyFn[:,end,end], color=:red, linestyle=:dash, label = "z_5, A_3")
+
+plot(pValueFunction)
+plot(pPolicyFunction)
+
+if dosave == 1
+        @save "tmpfile.jld"
+end
