@@ -1,11 +1,8 @@
-module ex3b
-export a_fixed_grid_optimized
+module ex03b
+export b_accelerator
 using Parameters, LinearAlgebra, Interpolations, JLD2
 
-function a_fixed_grid_optimized(economy, steadyStateValues,Vinit,nK,doload,dosave,namsave)
-    if doload ==1
-        #@load namsave
-    end
+function b_accelerator(economy, steadyStateValues,Vinit,nK)
     # 0. Get (unpack) the parameters back
     @unpack vGridZ, vGridA,mTranstnZ,mTranstnA, mTranstnZA,α,β,δ,θ,maxiter = economy
     @unpack kss, l1ss, l2ss = steadyStateValues
@@ -154,9 +151,6 @@ function a_fixed_grid_optimized(economy, steadyStateValues,Vinit,nK,doload,dosav
 
     tPolicyFn = vGridK[tPolicyFnIndx]
     return tVF, tPolicyFn, vGridK
-    if dosave ==1
-        @save namsave
-    end
 end
 
 end
