@@ -99,7 +99,7 @@ println(" calling accelerator... ")
 # f(9) = 513 f(10) = 1025 f(11) = 2049 f(12) = 4097 f(13) = 8193 f(14) = 16385
 #f(15) = 32769 f(16) = 65537 f(17) = 131073 f(18) = 262145
 #     f(19) = 524289   f(20) = 1048577
-nMidPoints = [4 5 7]# [4 5 7] easy   #  real stuff: [5, 7, 9, 12]
+nMidPoints = [4 5 7]# [4 5 7] easy   #  real stuff: [5 7 9] [5, 7, 9, 12]
 @time mVF, mPolicyFn, vGridK, vMaxDifference = ex03c.c_multigrid(econparams, SSVarbls, nMidPoints)
 # ------------------------------------------------------------------------------
 # 04. Graphs 03.03 Value Functions:
@@ -108,14 +108,15 @@ plot!(vGridK, mVF[:,end,1], label = "z_5, A_1")
 plot!(vGridK, mVF[:,1,end], label = "z_1, A_5")
 plot!(vGridK, mVF[:,end,end], label = "z_5, A_3")
 #Save plots...
-savefig("Plots/000_ValueFunction_b_accelerator_20191129.png")
+savefig("Plots/003_ValueFunction_c_multigrid_4_5_7_20191130.png")
 # Graphs Policy Functions:
 pPolicyFunction =  plot(vGridK,vGridK,title="Policy Function", color=:black,linestyle=:dash)
 plot!(vGridK, mPolicyFn[:,1,1], label = "z_1, A_1", xlabel = "Capital", color=:blue)
 plot!(vGridK, mPolicyFn[:,end,1],label = "z_5, A_1", color=:blue, linestyle=:dash)
 plot!(vGridK, mPolicyFn[:,1,end], label = "z_1, A_5", color=:red)
 plot!(vGridK, mPolicyFn[:,end,end], color=:red, linestyle=:dash, label = "z_5, A_3")
-#savefig("Plots/000_PolicyFunction_b_accelerator_20191129.png")
+# savefig
+savefig("Plots/003_PolicyFunction_c_multigrid_4_5_7_20191130.png")
 #plot(pValueFunction)
 #plot(pPolicyFunction)
 
@@ -132,7 +133,11 @@ plot!(vGridK, mPolicyFn[:,end,end], color=:red, linestyle=:dash, label = "z_5, A
 #Iteration = 360 Sup Diff = 9.825041917304719e-7
 #105.527173 seconds (1.05 G allocations: 15.751 GiB, 1.93% gc time)
 #       multigrid does
+# for: nMidPoints = [4 5 7]
+#Iteration = 222 Sup Diff = 1.0694044652484643e-6
+#191.621770 seconds (6.21 G allocations: 97.982 GiB, 8.58% gc time)
+# for: nMidPoints = [5 7 9]
 
 if dosave == 1
-        @save "Data/b_acceleratorData_20191129.jld"
+        @save "Data/c_Data_20191130.jld"
 end
