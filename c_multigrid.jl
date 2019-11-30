@@ -1,27 +1,23 @@
 module ex03c
 export c_multigrid
-using Parameters, LinearAlgebra, Interpolations, JLD2
+using Parameters, LinearAlgebra, Interpolations, JLD2, NLsolve
 
-function c_multigrid(economy, steadyStateValues,Vinit,nK)
+include("gridNum.jl")
+using .ex7aux
+
+function c_multigrid(economy, steadyStateValues, nMidPoints::Array)
     # 0. Get (unpack) the parameters back
     @unpack vGridZ, vGridA,mTranstnZ,mTranstnA, mTranstnZA,α,β,δ,θ,maxiter = economy
-    @unpack kss, l1ss, l2ss = steadyStateValues
+    @unpack kss, l1ss, l2ss, utilitySS = steadyStateValues
     nZ = length(vGridZ)
     nA = length(vGridA)
 
     # Grid Capital
-    vGridK = collect(range(0.7 * kss, 1.3 * kss, length = nK))
+    kmin = 0.7 * kss
+    kmax = 1.3 * kss
 
-    # Pre-allocation
-    #   Create empty matrices where to record results (to return also) (:)
-    tVF = Vinit
-    tVFNew = zeros(nK,nZ,nA)
-    tPolicyFnIndx = zeros(Int64,nK,nZ,nA)
-    vProvisional = zeros(nK)
-
-    # Initial guess for labour choices
-    guessL1 = l1ss
-    guessL2 = l2ss
+    dicLabor = Dict()
+    dictVF = Dict()
 
     # Auxiliary function
     function labour_choice(K,Knext,ProdZ, ProdA, guessL1, guessL2,α,β,δ,θ,eZ)
@@ -75,112 +71,128 @@ function c_multigrid(economy, steadyStateValues,Vinit,nK)
         return valueProvisional
     end
 
-    # Get utility(z,a,k) and labor(z,A,k,k') functions (matrices, actually)
-    #    for all (z,A,k,k')
-    #       to use in VFI to find V(z,A,k) and k'(z,A,k)
-    println(" Getting tensor of labors... ")
-    ml1 = -22*ones(nK,nK,nZ,nA)
-    ml2 = -22*ones(nK,nK,nZ,nA)
-    for iA in 1:nA
-        for iZ in 1:nZ
-            for iK in 1:nK
-                for iKNext in 1:nK
-                    eZ = exp(vGridZ[iZ])
-                    l1sol, l2sol = getLabourOrReturnGuess(vGridK[iK], vGridK[iKNext], vGridZ[iZ], vGridA[iA], l1ss, l2ss,α,β,δ,θ,eZ)
-                    ml1[iK,iKNext,iZ,iA] = l1sol
-                    ml2[iK,iKNext,iZ,iA] = l2sol
-                end
-            end
-        end
-    end
-    println(" Tensor of labors computed... ")
-
-    println(" VFI starts.... ")
-    # VFI
-    maxDiff = 10.0
+    # --------------------------------------------------------------------------
+    # Multigrid scheme calculation... :)
+    println(" Multigrid starts ;).... ")
     tol = 1.0e-6
-    iteration = 0
 
-    while(maxDiff > tol && iteration<maxiter)
+    for iGrid in 1:length(nMidPoints)
 
-        itp = interpolate((vGridK, vGridZ, vGridA), tVF, Gridded(Linear()))
-        tVFInterpol = itp(vGridK, vGridZ,vGridA)
+        println("Solving for grid number $iGrid ")
+        println(" ")
+        # ----------------------------------------------------------------------
+        # Generate the Capital grid:
+        global vGridK = ex7aux.gridNum(kmin, kmax, nMidPoints[iGrid])
+        nK = length(vGridK)
 
-        #ACCELERATOR, do max only once every ten
-        if(mod(iteration,10)==0 || iteration == 1)
-            #do max step only once every ten times:
+        # -----------------
+        # Pre-allocation for VFI stuff
+        global tVF = fill(utilitySS, nK, nZ, nA)
+        tVFNew = zeros(nK, nZ, nA)
+        global tPolicyFnIndx = zeros(Int64,nK,nZ, nA)
+        d4ProvisionalLaborOne = zeros(nK,nK, nZ, nA)
+        d4ProvisionalLaborTwo = zeros(nK,nK, nZ, nA)
+        vProvisional = zeros(nK)
+        global vMaxDiff = Float64[]
+        # ----------------------------------------------------------------------
+        # Find Labour choice matrices
+        # Initial guess for labour choices
+        guessL1 = l1ss
+        guessL2 = l2ss
+
+
+
+
+
+        # IMPROVE THE MATRIX FOR LABOR CALCULATION, ENHANCE...
+        println("Finding labour choice matrices for all k,kprime' ... ")
+        println(" ")
+        for iA in 1:nA
+            for iZ in 1:nZ
+                for iK in 1:nK
+                    for iKNext in 1:nK
+
+                        # Optimal labor choices
+                        keyLabor = (vGridK[iK], vGridK[iKNext], vGridZ[iZ],vGridA[iA])
+                        if keyLabor ∈ keys(dicLabor)
+                            l1, l2 = dicLabor[keyLabor]
+                        else
+
+                            l1, l2 = try
+                                labour_choice(vGridK[iK], vGridK[iKNext], vGridZ[iZ],vGridA[iA], guessL1, guessL2)
+                            catch
+                                guessL1, guessL2
+                            end
+
+                            # store in dictionary
+                            keyLabor = (vGridK[iK], vGridK[iKNext], vGridZ[iZ],vGridA[iA])
+
+                            dicLabor[keyLabor] = [l1, l2]
+                        end #catch key_labor
+                    end #for iKNext in 1:nK
+                end  #for iK in 1:nK
+            end  #for iZ in 1:nZ
+        end  #for iA in 1:nA
+
+        # ----------------------------------------------------------------------
+        # VFI (computed each multigridIteration)
+        maxDiff = 1.0
+        iteration = 0
+
+        println("VFI ...")
+        println(" ")
+
+        while(maxDiff > tol)
             for iA in 1:nA
                 for iZ in 1:nZ
                     for iK in 1:nK
                         for iKNext in 1:nK
-                            #get expected value:
+
                             expected = 0.0
+
                             for iAnext in 1:nA
                                 for iZnext in 1:nZ
                                     expected = expected + mTranstnZ[iZ, iZnext] * mTranstnA[iA, iAnext] * tVF[iKNext,iZnext,iAnext]
                                 end
-                            end #for iAnext
-
-                            eZ = exp(vGridZ[iZ])
-                            L1solved = ml1[iK,iKNext,iZ,iA]#vGridK[iK]^(1-α)
-                            L2solved = ml2[iK,iKNext,iZ,iA]#vGridK[iK]^(1-α)
-                            vProvisional[iKNext] = val_provisional(vGridK[iK], vGridK[iKNext], vGridZ[iZ],vGridA[iA],L1solved, L2solved, expected, economy)
-                        end #for iKNext
-
-                        tVFNew[iK, iZ, iA], tPolicyFnIndx[iK, iZ, iA] = findmax(vProvisional)
-                    end #for iK
-                end # for iZ
-            end  #end of for iA and fors...
-
-        else
-            #Do accelerator step, just update VF
-            for iA in 1:nA
-                for iZ in 1:nZ
-                    for iK in 1:nK
-
-
-                        iKnextOptimal = tPolicyFnIndx[iK, iZ, iA] #found previously
-                        kNxt = vGridK[iKnextOptimal]
-                        #get expected value:
-                        expectedVal = 0.0
-                        for iAnext in 1:nA
-                            for iZnext in 1:nZ
-                                expectedVal = expectedVal + mTranstnZ[iZ, iZnext] * mTranstnA[iA, iAnext] * tVF[iKnextOptimal,iZnext,iAnext]
                             end
-                        end #for iAnext
 
-                        l1 = ml1[iK,iKnextOptimal,iZ,iA]#vGridK[iK]^(1-α)
-                        l2 = ml2[iK,iKnextOptimal,iZ,iA]#vGridK[iK]^(1-α)
+                            # labor
+                            keyLabor = (vGridK[iK], vGridK[iKNext], vGridZ[iZ],vGridA[iA])
+                            l1, l2 = dicLabor[keyLabor]
+                            # Values for all k'
+                            vProvisional[iKNext] = val_provisional(vGridK[iK], vGridK[iKNext], vGridZ[iZ],vGridA[iA], l1, l2, expected, economy)
 
-                        eZ = exp(vGridZ[iZ])
-                        kNow = vGridK[iK]
-                        c1 = eZ*kNow^α * l1^(1-α) + (1-δ) * kNow - kNxt
-                        c2 = vGridA[iA] * l2
-                        if c1 < 0 || c2 < 0
-                            valueProvisional = -100000
+                        end #for iKNext in 1:nK
+
+                        keyValueFunction = (vGridK[iK], vGridZ[iZ], vGridA[iA])
+
+                        if keyValueFunction ∈ keys(dictVF)
+                            tVFNew[iK, iZ, iA], tPolicyFnIndx[iK, iZ, iA] = dictVF[keyValueFunction]
                         else
-                            util = c1^θ*c2^(1-θ) - 0.5*(l1+l2)^2
-                            valueProvisionalV = (1-β)*util + β*expectedVal
-                        end
 
-                        tVFNew[iK, iZ, iA],  = valueProvisionalV
+                            tVFNew[iK, iZ, iA], tPolicyFnIndx[iK, iZ, iA] = findmax(vProvisional)
+                            dictVF[keyValueFunction] = [tVFNew[iK, iZ, iA], tPolicyFnIndx[iK, iZ, iA]]
 
-                    end #for iK
-                end # for iZ
-            end  #end of for iA and fors...
-        end #end of if (for accelerator comparison)
+                        end #if check keyVF
+                    end #for iK in 1:nK
+                end #for iZ in 1:nZ
+            end #for iA in 1:nA
 
-        maxDiff = norm(tVFNew-tVF)
-        tVF, tVFNew = tVFNew, tVF
+            maxDiff = norm(tVFNew-tVF)
+            vMaxDiff = push!(vMaxDiff,maxDiff)
 
-        iteration = iteration+1
-        if(mod(iteration,10)==0 || iteration == 1)
-            println(" Iteration = ", iteration, " Sup Diff = ", maxDiff)
-        end #end of if for the println(iteraton and sup diff)
-    end  #end of while()
+            tVF, tVFNew = tVFNew, tVF
+
+            iteration = iteration+1
+            if(mod(iteration,10)==0 || iteration == 1)
+                println(" Iteration = ", iteration, " Sup Diff = ", maxDiff)
+            end #if
+        end #while VFI
+    end  #for multigrid...
 
     tPolicyFn = vGridK[tPolicyFnIndx]
-    return tVF, tPolicyFn, vGridK
+    #tPolicyFn = tPolicyFnIndx
+    return tVF, tPolicyFn, vGridK, vMaxDiff
 end
 
 end

@@ -1,0 +1,8 @@
+function almostFib(n)
+        if n == 1
+            return 2
+        else
+            res = almostFib(n-1) + 2^(n-1)
+            return res
+        end
+end

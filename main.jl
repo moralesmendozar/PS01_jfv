@@ -18,6 +18,8 @@ include("a_fixed_grid_optimized.jl")
 using .ex3b
 include("b_accelerator.jl")
 using .ex03b
+include("c_multigrid.jl")
+using .ex03c
 println(" modules loaded ok")
 # ------------------------------------------------------------------------------
 # 1. Set Parameters (building structure)
@@ -80,17 +82,25 @@ if doload == 1
         #@load "tmpfile.jld"
         #mVinit = mVF
 else
-        @unpack kss = SSVarbls
+        @unpack kss, utilitySS= SSVarbls
         nk = 250
         nZ = length(vGridZ)
         nA = length(vGridA)
         vGridK = collect(range(0.7 * kss, 1.3 * kss, length = nk))
         mVinit = repeat(vGridK,1, nZ,nA)
+        #mVinit = fill(utilitySS, nk, nZ, nA)
 end
 println(" calling accelerator... ")
 #@time mVF, mPolicyFn, vGridK = ex3.a_fixed_grid(econparams, SSVarbls,mVinit,nk)
 #@time mVF, mPolicyFn, vGridK = ex3b.a_fixed_grid_optimized(econparams, SSVarbls,mVinit,nk,0,0,"OptimFunData.jld")
-@time mVF, mPolicyFn, vGridK = ex03b.b_accelerator(econparams, SSVarbls,mVinit,nk)
+#@time mVF, mPolicyFn, vGridK = ex03b.b_accelerator(econparams, SSVarbls,mVinit,nk)
+# MultiGrid:
+#f(1) = 3 f(2) = 5 f(3) = 9 f(4) = 17 f(5) = 33 f(6) = 65 f(7) = 129 f(8) = 257
+# f(9) = 513 f(10) = 1025 f(11) = 2049 f(12) = 4097 f(13) = 8193 f(14) = 16385
+#f(15) = 32769 f(16) = 65537 f(17) = 131073 f(18) = 262145
+#     f(19) = 524289   f(20) = 1048577
+nMidPoints = [4 5 7]# [4 5 7] easy   #  real stuff: [5, 7, 9, 12]
+@time mVF, mPolicyFn, vGridK, vMaxDifference = ex03c.c_multigrid(econparams, SSVarbls, nMidPoints)
 # ------------------------------------------------------------------------------
 # 04. Graphs 03.03 Value Functions:
 pValueFunction = plot(vGridK, mVF[:,1,1],title="Value Function", label = "z_1, A_1", xlabel = "Capital",legend=:topleft)
@@ -112,11 +122,17 @@ plot!(vGridK, mPolicyFn[:,end,end], color=:red, linestyle=:dash, label = "z_5, A
 
 
 # ------------------------------------------------------------------------------
-#a_fixed_grid_optimized does:
+#       a_fixed_grid does:
+#Iteration = 360 Sup Diff = 9.836069397986712e-7
+#23345.156622 seconds (15.06 G allocations: 260.431 GiB, 0.21% gc time)
+#       a_fixed_grid_optimized does:
 #Iteration = 360 Sup Diff = 9.836069397986712e-7
 #329.447920 seconds (9.70 G allocations: 144.820 GiB, 4.07% gc time)
-
+#       b_accelerator does:
+#Iteration = 360 Sup Diff = 9.825041917304719e-7
+#105.527173 seconds (1.05 G allocations: 15.751 GiB, 1.93% gc time)
+#       multigrid does
 
 if dosave == 1
-        @save "Data/a_fixed_grid_optimized__20191129.jld"
+        @save "Data/b_acceleratorData_20191129.jld"
 end
