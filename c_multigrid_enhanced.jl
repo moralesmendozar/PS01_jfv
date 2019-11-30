@@ -1,11 +1,11 @@
-module ex03c
-export c_multigrid
+module ex3c
+export c_multigrid_enhanced
 using Parameters, LinearAlgebra, Interpolations, JLD2, NLsolve
 
 include("gridNum.jl")
 using .ex7aux
 
-function c_multigrid(economy, steadyStateValues, nMidPoints::Array)
+function c_multigrid_enhanced(economy, steadyStateValues, nMidPoints::Array)
     # 0. Get (unpack) the parameters back
     @unpack vGridZ, vGridA,mTranstnZ,mTranstnA, mTranstnZA,α,β,δ,θ,maxiter = economy
     @unpack kss, l1ss, l2ss, utilitySS = steadyStateValues
