@@ -102,8 +102,8 @@ println(" calling accelerator... ")
 #f(15) = 32769 f(16) = 65537 f(17) = 131073 f(18) = 262145
 #     f(19) = 524289   f(20) = 1048577
 nMidPoints = [5 7 9]# [4 5 7] easy   #  real stuff: [5 7 9] [5, 7, 9, 12]
-@time mVF, mPolicyFn, vGridK, vMaxDifference = ex03c.c_multigrid(econparams, SSVarbls, nMidPoints)
-#@time mVF, mPolicyFn, vGridK, vMaxDifference = ex3c.c_multigrid_enhanced(econparams, SSVarbls, nMidPoints)
+#@time mVF, mPolicyFn, vGridK, vMaxDifference = ex03c.c_multigrid(econparams, SSVarbls, nMidPoints)
+@time mVF, mPolicyFn, vGridK, vMaxDifference = ex3c.c_multigrid_enhanced(econparams, SSVarbls, nMidPoints)
 # ------------------------------------------------------------------------------
 # 04. Graphs 03.03 Value Functions:
 pValueFunction = plot(vGridK, mVF[:,1,1],title="Value Function", label = "z_1, A_1", xlabel = "Capital",legend=:topleft)
@@ -111,7 +111,7 @@ plot!(vGridK, mVF[:,end,1], label = "z_5, A_1")
 plot!(vGridK, mVF[:,1,end], label = "z_1, A_5")
 plot!(vGridK, mVF[:,end,end], label = "z_5, A_3")
 #Save plots...
-savefig("Plots/003_ValueFunction_c_multigrid_5_7_9_20191130.png")
+savefig("Plots/003_ValueFunction_c_multigrid_enhanced579_20191130.png")
 # Graphs Policy Functions:
 pPolicyFunction =  plot(vGridK,vGridK,title="Policy Function", color=:black,linestyle=:dash)
 plot!(vGridK, mPolicyFn[:,1,1], label = "z_1, A_1", xlabel = "Capital", color=:blue)
@@ -119,7 +119,7 @@ plot!(vGridK, mPolicyFn[:,end,1],label = "z_5, A_1", color=:blue, linestyle=:das
 plot!(vGridK, mPolicyFn[:,1,end], label = "z_1, A_5", color=:red)
 plot!(vGridK, mPolicyFn[:,end,end], color=:red, linestyle=:dash, label = "z_5, A_3")
 # savefig
-savefig("Plots/003_PolicyFunction_c_multigrid_5_7_9_20191130.png")
+savefig("Plots/003_PolicyFunction_c_multigrid_enhanced579_20191130.png")
 #plot(pValueFunction)
 #plot(pPolicyFunction)
 
@@ -136,13 +136,19 @@ savefig("Plots/003_PolicyFunction_c_multigrid_5_7_9_20191130.png")
 #Iteration = 360 Sup Diff = 9.825041917304719e-7
 #105.527173 seconds (1.05 G allocations: 15.751 GiB, 1.93% gc time)
 #       multigrid does
-# for: nMidPoints = [4 5 7]
+#               for: nMidPoints = [4 5 7]
 # Iteration = 70 Sup Diff = 9.803856641972994e-7
 # 82.542657 seconds (1.98 G allocations: 31.296 GiB, 7.88% gc time)
-# for: nMidPoints = [5 7 9]
-#Iteration = 240 Sup Diff = 1.0203742775089128e-6
-#3219.721571 seconds (104.36 G allocations: 1.607 TiB, 10.38% gc time)
+#               for: nMidPoints = [5 7 9]
+#Iteration = 30 Sup Diff = 1.2622364240652081e-6
+# 923.525038 seconds (16.66 G allocations: 263.848 GiB, 9.52% gc time)
+#       multigrid_enhanced does
+#               for: nMidPoints = [4 5 7]
+#Iteration = 70 Sup Diff = 9.803856641972994e-7
+# 62.945592 seconds (1.98 G allocations: 31.257 GiB, 15.73% gc time)
+#               for: nMidPoints = [5 7 9]
+#
 
 if dosave == 1
-        @save "Data/c_Data_20191130.jld"
+        @save "Data/c_Multigrid_5_7_9_20191130.jld"
 end

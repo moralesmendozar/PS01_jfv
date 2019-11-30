@@ -1,0 +1,57 @@
+ Steady state 
+K_ss = 0.8301903102383987  L_ss = 0.5040210212016984  C1_ss = 0.2733757991290202 C2_ss = 0.2690312777924755
+---------------------------------------------------------------------
+ 
+ calling accelerator... 
+ Multigrid starts ;).... 
+Solving for grid number 1 
+ 
+Finding labour choice matrices for all k,kprime' ... 
+ 
+VFI ...
+ 
+ Iteration = 1 Sup Diff = 0.1024479581437329
+ Iteration = 10 Sup Diff = 0.006092414686276503
+ Iteration = 20 Sup Diff = 0.003499688348592483
+ Iteration = 30 Sup Diff = 0.0021277236179145028
+ Iteration = 40 Sup Diff = 0.0013164265355612987
+ Iteration = 50 Sup Diff = 0.0008224126357560382
+ Iteration = 60 Sup Diff = 0.0005180804019119543
+ Iteration = 70 Sup Diff = 0.00032889252885157116
+ Iteration = 80 Sup Diff = 0.00021027560210217148
+ Iteration = 90 Sup Diff = 0.00013529905877354998
+ Iteration = 100 Sup Diff = 8.754749587729809e-5
+ Iteration = 110 Sup Diff = 5.69253589621291e-5
+ Iteration = 120 Sup Diff = 3.716762695663658e-5
+ Iteration = 130 Sup Diff = 2.4351733356149615e-5
+ Iteration = 140 Sup Diff = 1.6000790898989803e-5
+ Iteration = 150 Sup Diff = 1.0538386655122887e-5
+ Iteration = 160 Sup Diff = 6.9540231801051046e-6
+ Iteration = 170 Sup Diff = 4.595862323977554e-6
+ Iteration = 180 Sup Diff = 3.0411252119037364e-6
+ Iteration = 190 Sup Diff = 2.0143263226152724e-6
+ Iteration = 200 Sup Diff = 1.3352604418061686e-6
+Solving for grid number 2 
+ 
+Finding labour choice matrices for all k,kprime' ... 
+ 
+VFI ...
+ 
+ Iteration = 1 Sup Diff = 2.6697201572740594e-5
+ Iteration = 10 Sup Diff = 1.6569251746064428e-5
+ Iteration = 20 Sup Diff = 5.959717428494087e-6
+ Iteration = 30 Sup Diff = 3.930814969804968e-6
+ Iteration = 40 Sup Diff = 2.5991271373424934e-6
+ Iteration = 50 Sup Diff = 1.7218688600466009e-6
+ Iteration = 60 Sup Diff = 1.141830913110688e-6
+Solving for grid number 3 
+ 
+Finding labour choice matrices for all k,kprime' ... 
+ 
+VFI ...
+ 
+ Iteration = 1 Sup Diff = 4.842652076637999e-6
+ Iteration = 10 Sup Diff = 3.0868197079525634e-6
+ Iteration = 20 Sup Diff = 1.952188312453791e-6
+ Iteration = 30 Sup Diff = 1.2622364240652081e-6
+923.525038 seconds (16.66 G allocations: 263.848 GiB, 9.52% gc time)
