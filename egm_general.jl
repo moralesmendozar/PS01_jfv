@@ -1,54 +1,43 @@
-module exercise4
+module ex4
 
-export egm_labor
+export egm_general
 
-# ---------
 # Packages
-# ---------
 using Parameters
 using LinearAlgebra, Interpolations, NLsolve
 
-# --------
 # Modules
-# --------
 include("./egm_lss.jl")
-using .exercise4steadystate
+using .ex4ss
+include("./egm_vfi_std.jl")
+using .ex4vfi
 
-include("./egm_vfi_standard.jl")
-using .exercise4vfi
-
-function egm_labor(economy, steadyState, nGridCapital)
-
-    # ---------------
-    # 0. Housekeeping
-    # ---------------
-    @unpack α, θ, δ, vGridZ, mTransitionZ, vGridA, mTransitionA = economy
-    @unpack capitalSteadyState, laborOneSteadyState, laborTwoSteadyState, utilitySteadyState = steadyState
+function egm_general(economy, steadyState, nK)
+    # Parameters
+    @unpack α, θ, δ, vGridZ, mTranstnZ, vGridA, mTranstnA = economy
+    @unpack kss, l1ss, l2ss, utilitySS = steadyState
 
     nGridZ = length(vGridZ)
     nGridA = length(vGridA)
 
-    # ----------------
-    # 1. Grid Capital
-    # ----------------
-    vGridCapitalNext = collect(range(0.7 * capitalSteadyState, 1.3 * capitalSteadyState, length = nGridCapital))
+    # Kapital Grid
+    vGridK = collect(range(0.7 * kss, 1.3 * kss, length = nK))
 
-    # --------------------------------
-    # 2. Guess for the value function
-    # --------------------------------
-    # needs to be increasing
+    # 1. Guess VFI (initial)
+    # make it increasing
     vInitialGuess = Float64[]
-    for iCapital in 1:nGridCapital
-        value = iCapital/nGridCapital + utilitySteadyState
+    for iK in 1:nK
+        value = (iK-round(nK/2))/nK + utilitySS
         push!(vInitialGuess,value)
     end
 
-    # -------------------------------------------------
-    # 3. EGM: holding labor to its steady state value
-    # -------------------------------------------------
-    tValueFunctionTilde = exercise4steadystate.egm_labor_ss(economy, steadyState, vGridCapitalNext, vInitialGuess)
+    # 2. EGM: holding labor in its steady state value
+    tValueFunctionTilde, tMarketResourcesEndogenous = ex4ss.egm_lss(economy, steadyState, vGridK, vInitialGuess)
 
-    # ----------------------------
-    # 4. Recover opitmal policies
-    # -----------------------------
-    tValueFunctionTilde = exercise4vfi.egm_vfi_standard(economy, steadyState, vGridCapitalNext, vInitialGuess)
+    # 3. Recover opitmal policies
+    tPolicyFunction, tConsPolicy = ex4vfi.egm_vfi_std(tValueFunctionTilde, tMarketResourcesEndogenous, economy, steadyState, vGridK)
+    #return tValueFunctionTilde, tPolicyFunction, tConsPolicy
+    return tValueFunctionTilde
+end
+
+end

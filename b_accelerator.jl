@@ -81,18 +81,71 @@ function b_accelerator(economy, steadyStateValues,Vinit,nK)
     println(" Getting tensor of labors... ")
     ml1 = -22*ones(nK,nK,nZ,nA)
     ml2 = -22*ones(nK,nK,nZ,nA)
+    # for iA in 1:nA
+    #     for iZ in 1:nZ
+    #         for iK in 1:nK
+    #             for iKNext in 1:nK
+    #                 eZ = exp(vGridZ[iZ])
+    #                 l1sol, l2sol = getLabourOrReturnGuess(vGridK[iK], vGridK[iKNext], vGridZ[iZ], vGridA[iA], l1ss, l2ss,α,β,δ,θ,eZ)
+    #                 ml1[iK,iKNext,iZ,iA] = l1sol
+    #                 ml2[iK,iKNext,iZ,iA] = l2sol
+    #             end
+    #         end
+    #     end
+    # end
+
     for iA in 1:nA
         for iZ in 1:nZ
+            eZ = exp(vGridZ[iZ])
+            #reset l1prev and l2prev
+            l1prev = -10
+            l2prev = -10
             for iK in 1:nK
-                for iKNext in 1:nK
-                    eZ = exp(vGridZ[iZ])
-                    l1sol, l2sol = getLabourOrReturnGuess(vGridK[iK], vGridK[iKNext], vGridZ[iZ], vGridA[iA], l1ss, l2ss,α,β,δ,θ,eZ)
-                    ml1[iK,iKNext,iZ,iA] = l1sol
-                    ml2[iK,iKNext,iZ,iA] = l2sol
+                #do right triangle
+                for iKNext in iK:nK
+
+                    # Optimal labor choices
+                    if l1prev == l1ss
+                        l1 = l1ss
+                        l2 = l2ss
+                    else
+                        l1, l2 = try
+                            labour_choice(vGridK[iK], vGridK[iKNext], vGridZ[iZ],vGridA[iA], guessL1, guessL2,α,β,δ,θ,eZ)
+                        catch
+                            guessL1, guessL2
+                        end
+                    end
+                    l1prev = l1
+                    ml1[iK,iKNext,iZ,iA] = l1
+                    ml2[iK,iKNext,iZ,iA] = l2
+
+                end #for iKNext in iK:nKComplete
+                #do left triangle
+                if iK>=2
+                    for iKNext in iK-1:-1:1
+
+                        # Optimal labor choices
+                        if l2prev == l2ss
+                            l1 = l1ss
+                            l2 = l2ss
+                        else
+                            l1, l2 = try
+                                labour_choice(vGridKComplete[iK], vGridKComplete[iKNext], vGridZ[iZ],vGridA[iA], guessL1, guessL2,α,β,δ,θ,eZ)
+                            catch
+                                guessL1, guessL2
+                            end
+                        end #catch key_labor
+                        l2prev = l2
+                        ml1[iK,iKNext,iZ,iA] = l1
+                        ml2[iK,iKNext,iZ,iA] = l2
+
+                    end #for iKNext in iK:nKComplete
                 end
-            end
-        end
-    end
+            end  #for iK in 1:nKComplete
+        end  #for iZ in 1:nZ
+    end  #for iA in 1:nA
+
+
     println(" Tensor of labors computed... ")
 
     println(" VFI starts.... ")
@@ -100,11 +153,12 @@ function b_accelerator(economy, steadyStateValues,Vinit,nK)
     maxDiff = 10.0
     tol = 1.0e-6
     iteration = 0
+    global vMaxDiff = Float64[]
 
     while(maxDiff > tol && iteration<maxiter)
 
-        itp = interpolate((vGridK, vGridZ, vGridA), tVF, Gridded(Linear()))
-        tVFInterpol = itp(vGridK, vGridZ,vGridA)
+        #itp = interpolate((vGridK, vGridZ, vGridA), tVF, Gridded(Linear()))
+        #tVFInterpol = itp(vGridK, vGridZ,vGridA)
 
         #ACCELERATOR, do max only once every ten
         if(mod(iteration,10)==0 || iteration == 1)
@@ -171,6 +225,7 @@ function b_accelerator(economy, steadyStateValues,Vinit,nK)
         end #end of if (for accelerator comparison)
 
         maxDiff = norm(tVFNew-tVF)
+        vMaxDiff = push!(vMaxDiff,maxDiff)
         tVF, tVFNew = tVFNew, tVF
 
         iteration = iteration+1
@@ -178,9 +233,8 @@ function b_accelerator(economy, steadyStateValues,Vinit,nK)
             println(" Iteration = ", iteration, " Sup Diff = ", maxDiff)
         end #end of if for the println(iteraton and sup diff)
     end  #end of while()
-
     tPolicyFn = vGridK[tPolicyFnIndx]
-    return tVF, tPolicyFn, vGridK
+    return tVF, tPolicyFn, vGridK, vMaxDiff
 end
 
 end

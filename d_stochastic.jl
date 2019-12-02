@@ -78,6 +78,7 @@ function d_stochastic(economy, steadyStateValues,vGridKComplete, nKComplete,Vini
     println(" ")
     for iA in 1:nA
         for iZ in 1:nZ
+            eZ = exp(vGridZ[iZ])
             #reset l1prev and l2prev
             l1prev = -10
             l2prev = -10
