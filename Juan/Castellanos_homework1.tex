@@ -1,0 +1,207 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage{graphicx}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{dutchcal}
+\usepackage[short]{optidef}
+\usepackage{amsfonts}
+\usepackage[margin=2.5cm,bindingoffset=1cm]{geometry}
+\usepackage{tabularx}  % Tables
+\usepackage{longtable} %
+\usepackage{lscape}	   %
+\usepackage{ltablex}   %
+\usepackage[onehalfspacing]{setspace} %\singlespacing, \doublespacing
+\usepackage{figsize}   %
+\usepackage{subfigure}
+\usepackage{pgf,pgfarrows,pgfnodes,pgfautomata,pgfheaps,pgfshade}
+\usepackage{harvard}
+\usepackage{multirow} % para tablas
+\usepackage{color}
+\usepackage[latin2]{inputenc}
+\usepackage{keyval}
+\usepackage{kvoptions}
+\usepackage{fancyvrb}
+\usepackage{fvextra}
+\usepackage{upquote}
+\usepackage{float}
+\usepackage{ifthen}
+\usepackage{calc}
+\usepackage{ifplatform}
+\usepackage{pdftexcmds}
+\usepackage{etoolbox}
+\usepackage{xstring}
+\usepackage{xcolor}
+\usepackage{lineno}
+\usepackage{framed}
+\usepackage{minted}
+\linespread{1.4}
+
+\newcommand{\goodgap}{ \hspace{\subfigtopskip} \hspace{\subfigbottomskip}}
+
+\begin{document}
+\title{{\huge\textsc{ECONOMICS 714}} \\
+\Large\textsc{Computational Economics} \\ Fall 2019 - Homework \#1}
+\author{\Large{Juan Castellanos Silv\'{a}n}}
+\date{December 2, 2019}
+\maketitle
+
+\section{Social Planner Problem}
+The social planner in our economy maximizes the expected lifetime utility
+\begin{align}
+\mathbb{E}_{0} \sum_{t=0}^{\infty} \beta^{t}\left(c_{1, t}^{\theta} c_{2, t}^{1-\theta}-\frac{l_{t}^{2}}{2}\right)
+\end{align}
+subject to the production function for each good, (2) and (3), and the aggregate labor market constraint, (4).
+\begin{align}
+c_{1, t}+ k_{t+1}&=e^{z_{t}} k_{t}^{\alpha} l_{1, t}^{1-\alpha}  + (1-\delta) k_{t} \\
+c_{2, t} &= A_t l_{2,t} \\
+l_{t} &= l_{1,t} + l_{2,t}
+\end{align}
+Note that the household budget constraint is irrelevant for the social planner. In particular, the planner chooses the amount of capital tomorrow as well as consumption and labor for each of the two goods in the economy, i.e. $\{k_{t+1}, c_{1,t}, c_{2,t}, l_{1,t}, l_{2,t}\}$. 
+\\
+\\
+Now, we can formulate the social planner problem recursively. First, let the amount of capital today and the technology shocks be our state variables, i.e. $S = (k , z, A)$. Thus, the social planer solves the following recursive problem:
+\begin{align}
+\begin{split}
+\mathbb{V}(k,z,A)=\max _{k^{\prime}, l_1, l_2 \geq 0}&\left\{c_{1}^{\theta} c_{2}^{1-\theta}-\frac{(l_{1}+l_{2})^{2}}{2}+\beta\sum_{z^{\prime}} \sum_{A^{\prime}}\pi\left(z^{\prime}| z\right) \pi\left(A^{\prime} | A\right) \mathbb{V}\left( k^{\prime}, z^{\prime},A^{\prime}\right)\right\} \\
+\text{s.t.} \quad & c_{1} + k^{\prime} = e^{z} k^{\alpha} l_{1}^{1-\alpha} + (1-\delta) k  \\
+ & c_{2} = A l_{2} 
+ \end{split}
+\end{align}
+
+\section{Steady State}
+Assume that $z_{ss} = 0 $ and $ A_{ss} = 1 $. Then, the planner will solve the following problem
+\begin{align*}
+\underset{ \{k_{t+1}, c_{1,t}, c_{2,t}, l_{1,t}, l_{2,t}\} }{\operatorname{max}}  \sum_{t=0}^{\infty} &\beta^{t}\left(c_{1, t}^{\theta} c_{2, t}^{1-\theta}-\frac{(l_{1,t} + l_{2,t})^{2}}{2}\right) 
+\end{align*}
+\vspace{-1.2cm}\begin{align}
+\text{s.t.} \quad &
+c_{1, t}+ k_{t+1}= k_{t}^{\alpha} l_{1, t}^{1-\alpha}  + (1-\delta) k_{t} \\
+& c_{2, t} =  l_{2,t} 
+\end{align}
+F.O.C.
+\begin{align}
+(l_1): \quad  & \theta(1-\alpha) k_t^{\alpha} l_{1,t}^{-\alpha} \left(k_{t}^{\alpha}l_{1,t}^{1-\alpha} + (1-\delta) k_{t}- k_{t+1}\right)^{\theta-1}l_{2,t}^{1-\theta} - \left(l_{1,t} + l_{2,t}\right) = 0
+\\
+(l_2): \quad & (1-\theta)\left(k_{t}^{\alpha}l_{1,t}^{1-\alpha} + (1 - \delta) k_{t} - k_{t+1}\right)^{\theta}l_{2,t}^{-\theta} - \left(l_{1,t} + l_{2,t}\right) = 0 \\
+(k_{t+1}): \quad &- \theta c_{1,t}^{\theta-1} l_{2,t}^{1-\theta} + \theta \beta c_{1,t+1}^{\theta-1} \left(\alpha k_{t+1}^{\alpha-1}l_{1,t+1}^{1-\alpha} + 1 - \delta \right)l_{2,t+1}^{1-\theta} = 0
+\end{align}
+In the steady state, $k_{t} = k_{t+1}=k_{t+2}=k_{ss}$. The same applies for labor and consumption in the two sectors. Thus, the above system reduces to:
+\begin{align}
+&\theta(1-\alpha) k_{ss}^{\alpha} l_{1,ss}^{-\alpha} \left(k_{ss}^{\alpha}l_{1,ss}^{1-\alpha}  - \delta k_{ss} \right)^{\theta-1}l_{2,ss}^{1-\theta} - \left(l_{1,ss} + l_{2,ss}\right) = 0
+\\
+&(1-\theta)\left(k_{ss}^{\alpha}l_{1,ss}^{1-\alpha}  - \delta k_{ss} \right)^{\theta}l_{2,ss}^{-\theta} - \left(l_{1,ss} + l_{2,ss}\right) = 0 \\
+& \alpha\beta k_{ss}^{\alpha-1} l_{1,ss}^{1-\alpha} + \beta (1-\delta) - 1 = 0
+\end{align}
+Thus, we have a system of three equations: (11), (12) and (13), and three unknowns: $k_{ss}, l_{1,ss}$ and $l_{2,ss}$. We can solve for these steady state values using a non-linear solver. In particular, I find $k_{ss} \approx 0.830, l_{1,ss} \approx 0.235$ and $l_{2,ss} \approx 0.269$. 
+\\
+Finally, using the resource constraints in each sector, (6) and (7), we can recover the steady state values of consumption: $c_{1,ss} \approx 0.273$ and $c_{2,ss} \approx 0.269$. 
+
+\section{Value Function Iteration with a Fixed Grid}
+Now, consider the full-blown model. The first order conditions of the social planner in recursive formulation are given by
+\begin{small}
+\begin{align}
+(l_1): \quad  & (1-\alpha)e^z k^{\alpha} l_{1}^{-\alpha} \theta \left(e^z k^{\alpha}l_{1}^{1-\alpha} + (1-\delta) k - k^{\prime}\right)^{\theta-1} \left(A l_{2}\right)^{1-\theta} - \left(l_{1} + l_{2}\right) = 0
+\\
+(l_2): \quad & A (1-\theta) \left(e^z k^{\alpha}l_{1}^{1-\alpha} + \delta k - k^{\prime}\right)^{\theta} (Al_{2})^{-\theta} - \left(l_{1} + l_{2}\right) = 0 \\
+(k^{\prime}): \quad & \theta \left(e^{z} k^{\alpha} l_{1}^{1-\alpha} + (1-\delta) k - k^{\prime}\right)^{\theta-1} (Al_{2})^{1-\theta} - \beta \sum_{z^{\prime}}\sum_{A^{\prime}} \pi\left(z^{\prime}|z\right) \pi\left(A^{\prime}|A\right) V^{\prime}\left(k^{\prime},z^{\prime},A^{\prime}\right) = 0
+\end{align}
+\end{small}
+The envelope condition is
+\begin{small} 
+\begin{align}
+\mathbb{V}^{\prime}\left(k^{\prime},z^{\prime},A^{\prime}\right) =\left(\alpha e^{z^{\prime}} (k^{\prime})^{\alpha-1}(l_{1}^{\prime})^{1-\alpha} +1 - \delta \right) \theta \left(e^{z^{\prime}} (k^{\prime})^{\alpha} (l_{1}^{\prime})^{1-\alpha} + (1-\delta) k^{\prime} - k^{\prime \prime}\right)^{\theta-1} (Al_{2}^{\prime})^{1-\theta}
+\end{align}
+\end{small}
+Thus, combining equations (16) and (17) we obtain the \textit{Euler equation}:
+\begin{small}
+\begin{align}
+U_1^{\prime}(c_1,c_2,l_1,l_2) = \beta \mathbb{E} \left[ (\alpha e^{z^{\prime}} (k^{\prime})^{\alpha-1}(l_{1}^{\prime})^{1-\alpha} + 1- \delta )  U_1^{\prime}(c_1^{\prime},c_2^{\prime}, l^{\prime}_1,l^{\prime}_2) \right]
+\end{align}
+\end{small}
+\hspace{-0.15cm}where $U_1^{\prime}(c_1,c_2,l_1,l_2)$ denotes the derivative of the utility function with respect to the first argument.
+\\
+The other two equations, (14) and (15), correspond to the \textit{intratemporal substitution} between consumption and labor in each of the two sectors. Notice that given $k$ and $k^{\prime}$, we can use them to find the optimal values of labor since we have a system of two equations and two unknowns\footnote{ To solve the system of equations I use the ``NLsolve" package in Julia. Unfortunately, an exact solution is not available for all possible combinations of capital levels and productivity shocks. Consequently, I will set those values equal to the deterministic steady state optimal labor choice. }. 
+
+\subsection*{Pseudo-code}
+\begin{enumerate}
+\item Create a capital grid around its steady state value.
+\item Find the optimal labor choices, $l_1$ and $l_2$, for all possible combinations of capital, $k$ and $k^{\prime}$, given the productivity shocks, $z$ and $A$. For such purpose, solve the system of equations formed by the intratemporal substitution equations with the help of a non-linear equations solver.
+\item Given $l_1$ and $l_2$, use the standard value function algorithm to find the optimal capital policy function. 
+\end{enumerate}
+
+\subsection*{Results}
+
+\begin{figure}[h]
+\centering
+\subfigure[Value function]{\includegraphics[scale=0.3]{pValueFunctionFixedGrid.pdf}}
+\goodgap
+\subfigure[Capital policy function]{\includegraphics[scale=0.3]{pCapitalPolicyFixedGrid.pdf}}
+\caption{VFI with a fixed grid}
+\label{VFI_fixedGrid}
+\end{figure}
+
+Figure \ref{VFI_fixedGrid} plots the value and capital policy functions for the lowest and the highest productivity shocks in each of the two sectors. The response of the economy to a productivity shock depends on which sector experiences the shock. On the one hand, if there is a positive productivity shock in sector one, i.e. higher values of $e^{z}$, the economy will respond by accumulating more capital. On the other hand, if there is a positive shock in sector two, i.e. high values of $A$, we observe the opposite response: lower capital tomorrow. Recall that the technology in sector two uses only labor. Thus, the social planner will optimally choose more labor and less capital -- they are substitutes. Furthermore, since households have disutility from labor, they will prefer higher values of $e^z$ than higher values of $A$. Notice that the value function $V(k,5,1)$ is above $V(k,1,3)$, where the numbers determine the position on each of the productivity grids. 
+
+\section{Endogenous Grid Method}
+\paragraph{} The EGM changes the timing convention of the state variables that define the value function. In problem (5) we had chosen capital and the exogenous productivity shock as our state variables. Now, let the ``market resources" be our endogenous state variable, which we denote by $Y= e^z k^{\alpha} l_1^{1-\alpha} + (1-\delta)k$. As a result the problem can be written recursively as follows
+\begin{align}
+\begin{split}
+V(Y,z,A)=\max _{k^{\prime}, l_1, l_2 \geq 0}&\left\{c_{1}^{\theta} c_{2}^{1-\theta}-\frac{(l_{1}+l_{2})^{2}}{2}+\beta\sum_{z^{\prime}} \sum_{A^{\prime}}\pi\left(z^{\prime}| z\right) \pi\left(A^{\prime} | A\right) V\left( Y^{\prime},z^{\prime},A^{\prime}\right)\right\} \\
+\text{s.t.} \quad & c_{1} + k^{\prime} = Y  \\
+ & c_{2} = A l_{2} 
+\end{split}
+\end{align}
+Notice that with endogenous labor choice, the time-invariant optimal policy function for labor in sector 1 affects market resources next period. Thus, a modification to the standard EGM algorithm will be necessary. In particular, following Barillas \& Villaverde (2007) we will assume that the policy functions for labor are known\footnote{ These is indeed a good approximation since in this type of models labor varies very little across different levels of capital and productivity}.  As a result, we can still calculate optimal consumption using equation (18), which I reproduce here for the ease of exposition:
+\begin{align*}
+\theta c_1^{\theta - 1} \left( A l_2\right)^{1-\theta} = \beta \mathbb{E} \: V_Y\left( Y^{\prime},z^{\prime},A^{\prime}\right) = \tilde{V}_k\left( k^{\prime}, z^{\prime},A^{\prime}\right)
+\end{align*}
+If $\tilde{V}_k\left( k^{\prime}, z^{\prime},A^{\prime}\right)$ is known, then optimal consumption in good 1 can be computed as 
+\begin{align}
+c_1^* = \left(\frac{\theta}{\tilde{V}_k\left( k^{\prime}, z^{\prime},A^{\prime}\right)}\right)^{\frac{1}{(1-\theta)}}  A l_2
+\end{align}
+Then, given $c_1^*$ and $k^{\prime}$, we can find $Y^*$ and $V(Y^*, z, A)$.
+
+\subsection*{Pseudo-code}
+\begin{enumerate}
+\item Create a grid for capital tomorrow $G_{k_{t+1}}$.
+\item Using the grid for productivity in sector 1, $G_z$, compute a grid of values of market resources in the next period implied by $G_{k_{t+1}}$ as $G_{Y_{t+1}} = e^z k^{\alpha} l_{1,ss}^{1-\alpha} + (1-\delta) k \:\; \forall k \in G_{k_{t+1}}$
+\item Adapt the pseudo-code in section 3.1 of Barrillas and Fernandez-Villaverde (2007) using the equations above, i.e. implement the standard EGM assuming that labor in the two sector is equal to its steady state value. This allows us to construct a grid for market resources tomorrow. As a result, we should obtain the converged value function interpolated in $G_{k_{t+1}}$.
+\end{enumerate}
+
+\subsection*{Results}
+
+\section{Comparison of Grids}
+
+\section{Accelerator}
+\paragraph{} Skipping the max operator in the Bellman equation reduces the computing time. Running time without the accelerator is around two and a half minutes (140 sec), and it requires 7.51 M allocations. If the accelerator is implemented, running time goes down to approximately two minutes (120 sec). The efficiency gain comes from skipping the loop over capital tomorrow 9 out of 10 times, which reduces the number of allocations. However, in our application the efficiency gain is not so big overall because most of the running time is devoted to computing the optimal levels of labor in each of the two sectors, and this is done outside of the while loop. 
+
+Figure \ref{VFI_convergence} plots the evolution of the supremum norm between iterations. If the accelerator is implemented, this difference is not monotonic, however, we do not observe much difference anyways. 
+\begin{figure}[h]
+\centering
+\subfigure[Fixed grid]{\includegraphics[scale=0.32]{pConvergenceFixedGrid.pdf}}
+\goodgap
+\subfigure[Accelerator]{\includegraphics[scale=0.32]{pConvergenceAccelerator.pdf}}
+\caption{Sup norm convergence}
+\label{VFI_convergence}
+\end{figure}
+
+In terms of accuracy, the solution without the accelerator is a little bit more accurate, but differences are almost negligible. In particular, if one applies the accelerator, the number of iterations go from 232 to 227. Notice that the max operator was applied for the last time in iteration 220 with the accelerator, however, also notice that differences in the optimal values between iteration 220 and 232 are not very large. Indeed, optimal capital policy functions look identical in both cases. 
+
+\vspace{0.5cm}\begin{figure}[h]
+\centering
+\subfigure[Fixed grid]{\includegraphics[scale=0.32]{pCapitalPolicyFixedGrid.pdf}}
+\goodgap
+\subfigure[Accelerator]{\includegraphics[scale=0.32]{pCapitalPolicyAccelerator.pdf}}
+\caption{Capital policy functions}
+\label{VFI_convergence}
+\end{figure}
+
+\section{Multigrid}
+\paragraph{} The multigrid algorithm proceeds by solving the problem approximately in a coarse grid and then using the coarse grid solution as a starting point for the solution on a finer grid. 
+
+In order to simplify this problem, and at the same time increase the efficiency of the solution, we will create finer grids of capital that are superset of the coarser grids. In other words, we create additional grid points by computing the mid point between intervals. Despite it restricts the number of points in each grid to the following sequence: $2,3,5,9,17,\dots$, its main advantage is that it will allow us to implement memoization through the use of dictionaries. In particular, this will have a significant impact in the computation of the optimal values of labor in the two sectors, the slowest part in our algorithm. Given this approach, I will deviate slightly from the scheme proposed in the homework. I will solve the problem for grids of size $65, 129, 257, 513$ and $1025$, where the purpose of the first grids is just to built up memory.  
+
+In general, this method will allow us to gain accuracy in the solution since now we will be able to solve the problem for finer grids. However, it will still be computationally costly in spite of the memoization of the results from croaser grids. 
+
+\section{Stochastic grid}
+\end{document}
