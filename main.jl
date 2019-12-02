@@ -22,6 +22,8 @@ include("c_multigrid.jl")
 using .ex03c
 include("c_multigrid_enhanced.jl")
 using .ex3c
+include("d_stochastic.jl")
+using .ex3d
 println(" modules loaded ok")
 # ------------------------------------------------------------------------------
 # 1. Set Parameters (building structure)
@@ -92,7 +94,7 @@ else
         mVinit = repeat(vGridK,1, nZ,nA)
         #mVinit = fill(utilitySS, nk, nZ, nA)
 end
-println(" calling accelerator... ")
+println(" calling stochastic Grid... ")
 #@time mVF, mPolicyFn, vGridK = ex3.a_fixed_grid(econparams, SSVarbls,mVinit,nk)
 #@time mVF, mPolicyFn, vGridK = ex3b.a_fixed_grid_optimized(econparams, SSVarbls,mVinit,nk,0,0,"OptimFunData.jld")
 #@time mVF, mPolicyFn, vGridK = ex03b.b_accelerator(econparams, SSVarbls,mVinit,nk)
@@ -101,9 +103,16 @@ println(" calling accelerator... ")
 # f(9) = 513 f(10) = 1025 f(11) = 2049 f(12) = 4097 f(13) = 8193 f(14) = 16385
 #f(15) = 32769 f(16) = 65537 f(17) = 131073 f(18) = 262145
 #     f(19) = 524289   f(20) = 1048577
-nMidPoints = [5 7 9]# [4 5 7] easy   #  real stuff: [5 7 9] [5, 7, 9, 12]
+nMidPoints = [4 5]# [4 5 7] easy   #  real stuff: [5 7 9] [5, 7, 9, 12]
 #@time mVF, mPolicyFn, vGridK, vMaxDifference = ex03c.c_multigrid(econparams, SSVarbls, nMidPoints)
-@time mVF, mPolicyFn, vGridK, vMaxDifference = ex3c.c_multigrid_enhanced(econparams, SSVarbls, nMidPoints)
+#@time mVF, mPolicyFn, vGridK, vMaxDifference = ex3c.c_multigrid_enhanced(econparams, SSVarbls, nMidPoints)
+
+# Grid Capital
+nKComplete = 1000
+vGridKComplete = collect(range(0.85 * kss,1.25 * kss, length = nKComplete))
+#mVinitStoch = repeat(vGridKComplete,1, nZ,nA)
+mVinitStoch = fill(utilitySS, nKComplete, nZ, nA)
+@time mVF, mPolicyFn, vGridK, vMaxDifference, mL1, mL2 = ex3d.d_stochastic(econparams, SSVarbls,vGridKComplete, nKComplete,mVinitStoch)
 # ------------------------------------------------------------------------------
 # 04. Graphs 03.03 Value Functions:
 pValueFunction = plot(vGridK, mVF[:,1,1],title="Value Function", label = "z_1, A_1", xlabel = "Capital",legend=:topleft)
@@ -111,7 +120,7 @@ plot!(vGridK, mVF[:,end,1], label = "z_5, A_1")
 plot!(vGridK, mVF[:,1,end], label = "z_1, A_5")
 plot!(vGridK, mVF[:,end,end], label = "z_5, A_3")
 #Save plots...
-savefig("Plots/003_ValueFunction_c_multigrid_enhanced579_20191130.png")
+savefig("Plots/003_ValueFunction_d_stochastic_20191201.png")
 # Graphs Policy Functions:
 pPolicyFunction =  plot(vGridK,vGridK,title="Policy Function", color=:black,linestyle=:dash)
 plot!(vGridK, mPolicyFn[:,1,1], label = "z_1, A_1", xlabel = "Capital", color=:blue)
@@ -119,7 +128,7 @@ plot!(vGridK, mPolicyFn[:,end,1],label = "z_5, A_1", color=:blue, linestyle=:das
 plot!(vGridK, mPolicyFn[:,1,end], label = "z_1, A_5", color=:red)
 plot!(vGridK, mPolicyFn[:,end,end], color=:red, linestyle=:dash, label = "z_5, A_3")
 # savefig
-savefig("Plots/003_PolicyFunction_c_multigrid_enhanced579_20191130.png")
+savefig("Plots/003_PolicyFunction_d_stochastic_20191201.png")
 #plot(pValueFunction)
 #plot(pPolicyFunction)
 
@@ -147,8 +156,11 @@ savefig("Plots/003_PolicyFunction_c_multigrid_enhanced579_20191130.png")
 #Iteration = 70 Sup Diff = 9.803856641972994e-7
 # 62.945592 seconds (1.98 G allocations: 31.257 GiB, 15.73% gc time)
 #               for: nMidPoints = [5 7 9]
+#Iteration = 30 Sup Diff = 1.2622364240652081e-6
+#507.859205 seconds (16.65 G allocations: 263.614 GiB, 15.72% gc time)
+#               for: nMidPoints = [5 7 9 12]
 #
 
 if dosave == 1
-        @save "Data/c_Multigrid_5_7_9_20191130.jld"
+        #@save "Data/c_Multigrid_5_7_9_20191130.jld"
 end
