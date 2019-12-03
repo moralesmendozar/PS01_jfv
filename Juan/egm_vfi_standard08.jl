@@ -1,27 +1,40 @@
-module ex4vfi
+module exercise4vfi
 
-export egm_vfi_std
+export egm_vfi_standard
 
+# ---------
 # Packages
+# ---------
 using Parameters, NLsolve
 
-function egm_vfi_std(tVFTilde::Array, tMarketResourcesEndogenous::Array, economy, steadyState, vGridK::Array)
+function egm_vfi_standard(tValueFunctionTilde::Array, tMarketResourcesEndogenous::Array, economy, steadyState, vGridCapital::Array)
 
-    # Parameters:
-    @unpack α,β, θ, δ, vGridZ, mTranstnZ, vGridA, mTranstnA = economy
-    @unpack kss, l1ss, l2ss, utilitySS = steadyState
+    # ---------------
+    # 0. Housekeeping
+    # ---------------
+    @unpack α, θ, δ, β, vGridZ, mTransitionZ, vGridA, mTransitionA = economy
+    @unpack capitalSteadyState, laborOneSteadyState, laborTwoSteadyState, utilitySteadyState = steadyState
 
-    nZ = length(vGridZ)
-    nA = length(vGridA)
-    nK = length(vGridK)
+    nGridZ = length(vGridZ)
+    nGridA = length(vGridA)
+    nGridCapital = length(vGridCapital)
 
-    tVFTildeNew = zeros(nK, nZ, nA)
-    tPolicyFunction = zeros(nK, nZ, nA)
-    tLaborOnePolicy = zeros(nK, nZ, nA)
-    tLaborTwoPolicy = zeros(nK, nZ, nA)
-    tConsumptionOnePolicy = zeros(nK, nZ, nA)
-    tConsumptionTwoPolicy = zeros(nK, nZ, nA)
 
+    # -------------------
+    # 2. Pre-allocation
+    # -------------------
+    tValueFunctionTildeNew = zeros(nGridCapital, nGridZ, nGridA)
+    tPolicyFunction = zeros(nGridCapital, nGridZ, nGridA)
+    tLaborOnePolicy = zeros(nGridCapital, nGridZ, nGridA)
+    tLaborTwoPolicy = zeros(nGridCapital, nGridZ, nGridA)
+    tConsumptionOnePolicy = zeros(nGridCapital, nGridZ, nGridA)
+    tConsumptionTwoPolicy = zeros(nGridCapital, nGridZ, nGridA)
+
+
+    # -----------------------
+    # 3. Auxiliary functions
+    # -----------------------
+    # 3.1.
     function labor_choice(capital::Real, capitalNext::Real, eZ::Real, gridA::Real, guess1::Real, guess2::Real, economy)
 
         @unpack α, θ, δ, vGridZ = economy
@@ -74,35 +87,35 @@ function egm_vfi_std(tVFTilde::Array, tMarketResourcesEndogenous::Array, economy
     #  4. VFI in one step
     # --------------------
     # Initial guess for labor choices
-    guess1 = l1ss
-    guess2 = l2ss
+    guess1 = laborOneSteadyState
+    guess2 = laborTwoSteadyState
 
-    # println("Standard VFI in 1 step ...")
-    # println(" ")
-    for iA in 1:nA
+    println("Standard VFI in 1 step ...")
+    println(" ")
+    for iA in 1:nGridA
 
-        for iZ in 1:nZ
+        for iZ in 1:nGridZ
 
             eZ = exp(vGridZ[iZ])
             gridCapitalNextPeriod = 1
 
-            for iCapital in 1:nK
+            for iCapital in 1:nGridCapital
 
                 valueHighSoFar = -10000.0
-                capitalChoice  = vGridK[1]
+                capitalChoice  = vGridCapital[1]
 
-                for iCapitalNext in gridCapitalNextPeriod:nK
+                for iCapitalNext in gridCapitalNextPeriod:nGridCapital
 
                     # optimal labors
                     laborOne, laborTwo = try
-                        labor_choice(vGridK[iCapital], vGridK[iCapitalNext], eZ, vGridA[iA], guess1,  guess2, economy)
+                        labor_choice(vGridCapital[iCapital], vGridCapital[iCapitalNext], eZ, vGridA[iA], guess1,  guess2, economy)
                     catch
                         guess1, guess2
                     end
 
 
                     # consumptions
-                    consumptionOne = exp(vGridZ[iZ])*vGridK[iCapital]^α * laborOne^(1-α) + (1-δ)*vGridK[iCapital]- vGridK[iCapitalNext]
+                    consumptionOne = exp(vGridZ[iZ])*vGridCapital[iCapital]^α * laborOne^(1-α) + (1-δ)*vGridCapital[iCapital]- vGridCapital[iCapitalNext]
 
                     consumptionTwo = vGridA[iA] * laborTwo
 
@@ -113,11 +126,11 @@ function egm_vfi_std(tVFTilde::Array, tMarketResourcesEndogenous::Array, economy
                     else
 
                         expected = 0.0
-                        for iAnext in 1:nA
+                        for iAnext in 1:nGridA
 
-                            for iZnext in 1:nZ
+                            for iZnext in 1:nGridZ
 
-                                expected = expected + β * mTranstnZ[iZ,iZnext] * mTranstnA[iA, iAnext] * tVFTilde[iCapitalNext, iZnext, iAnext]
+                                expected = expected + β * mTransitionZ[iZ,iZnext] * mTransitionA[iA, iAnext] * tValueFunctionTilde[iCapitalNext, iZnext, iAnext]
 
                             end
                         end
@@ -131,7 +144,7 @@ function egm_vfi_std(tVFTilde::Array, tMarketResourcesEndogenous::Array, economy
                     if(valueProvisional>valueHighSoFar)
 
                         valueHighSoFar = valueProvisional
-                        capitalChoice = vGridK[iCapitalNext]
+                        capitalChoice = vGridCapital[iCapitalNext]
                         gridCapitalNextPeriod = iCapitalNext
 
                         tLaborOnePolicy[iCapital, iZ, iA] = laborOne
@@ -145,30 +158,31 @@ function egm_vfi_std(tVFTilde::Array, tMarketResourcesEndogenous::Array, economy
 
                 end
 
-                tVFTildeNew[iCapital, iZ, iA] = valueHighSoFar
+                tValueFunctionTildeNew[iCapital, iZ, iA] = valueHighSoFar
                 tPolicyFunction[iCapital, iZ, iA] = capitalChoice
 
             end
         end
     end
 
-    maxDifference = maximum(abs.(tVFTildeNew - tVFTilde))
 
-    tVFTilde, tVFTildeNew = tVFTildeNew, tVFTilde
+    maxDifference = maximum(abs.(tValueFunctionTildeNew - tValueFunctionTilde))
+
+    tValueFunctionTilde, tValueFunctionTildeNew = tValueFunctionTildeNew, tValueFunctionTilde
 
 
-    # if maxDifference > 1e-6
-    #     println("It should converge in 1 iteration! Something might be wrong. Check")
-    #     @show maxDifference
-    # end
+    if maxDifference > 1e-6
+        println("It should converge in 1 iteration! Something might be wrong. Check")
+        @show maxDifference
+    end
 
 
     # Consumption policy
-    for iA in 1:nA
-        for iZ in 1:nZ
-            for iCapital in 1:nK
+    for iA in 1:nGridA
+        for iZ in 1:nGridZ
+            for iCapital in 1:nGridCapital
 
-                tConsumptionOnePolicy[iCapital, iZ, iA] = exp(vGridZ[iZ])*vGridK[iCapital]^α * tLaborOnePolicy[iCapital, iZ, iA]^(1-α) + (1-δ)*vGridK[iCapital] - tPolicyFunction[iCapital, iZ, iA]
+                tConsumptionOnePolicy[iCapital, iZ, iA] = exp(vGridZ[iZ])*vGridCapital[iCapital]^α * tLaborOnePolicy[iCapital, iZ, iA]^(1-α) + (1-δ)*vGridCapital[iCapital] - tPolicyFunction[iCapital, iZ, iA]
 
                 tConsumptionTwoPolicy[iCapital, iZ, iA] = vGridA[iA]*tLaborTwoPolicy[iCapital, iZ, iA]
 
@@ -176,7 +190,7 @@ function egm_vfi_std(tVFTilde::Array, tMarketResourcesEndogenous::Array, economy
         end
     end
 
-return tVFTilde, tPolicyFunction, tConsumptionOnePolicy, tConsumptionTwoPolicy, tLaborOnePolicy, tLaborTwoPolicy
+return tPolicyFunction, tConsumptionOnePolicy, tConsumptionTwoPolicy, tLaborOnePolicy, tLaborTwoPolicy
 
 end
 

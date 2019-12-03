@@ -1,8 +1,11 @@
-module ex03b
-export b_accelerator
+module ex3b
+export a_fixed_grid_optimized
 using Parameters, LinearAlgebra, Interpolations, JLD2
 
-function b_accelerator(economy, steadyStateValues,Vinit,nK)
+function a_fixed_grid_optimized(economy, steadyStateValues,Vinit,nK,doload,dosave,namsave)
+    if doload ==1
+        #@load namsave
+    end
     # 0. Get (unpack) the parameters back
     @unpack vGridZ, vGridA,mTranstnZ,mTranstnA, mTranstnZA,α,β,δ,θ,maxiter = economy
     @unpack kss, l1ss, l2ss = steadyStateValues
@@ -14,6 +17,8 @@ function b_accelerator(economy, steadyStateValues,Vinit,nK)
 
     # Pre-allocation
     #   Create empty matrices where to record results (to return also) (:)
+    #tVF = zeros(nK,nZ,nA)
+    #tVF = repeat(vGridK, nZ,nA)
     tVF = Vinit
     tVFNew = zeros(nK,nZ,nA)
     tPolicyFnIndx = zeros(Int64,nK,nZ,nA)
@@ -27,6 +32,9 @@ function b_accelerator(economy, steadyStateValues,Vinit,nK)
     function labour_choice(K,Knext,ProdZ, ProdA, guessL1, guessL2,α,β,δ,θ,eZ)
         # FUNCTION FINDS THE L1,L2 GIVEN K,K', using the FOCs of SPP.... :)
         #       using the nlsolve package (function)  :)
+        #function parameters!(F,x, K,Knext,α,δ,eZ)
+        #    c1 = eZ * K^α * x[1]^(1-α) + (1-δ)*K - Knext
+        #end
 
         function focs12!(F,x)
             c1 = eZ * K^α * x[1]^(1-α) + (1-δ)*K - Knext
@@ -144,99 +152,64 @@ function b_accelerator(economy, steadyStateValues,Vinit,nK)
             end  #for iK in 1:nKComplete
         end  #for iZ in 1:nZ
     end  #for iA in 1:nA
-
-
     println(" Tensor of labors computed... ")
 
     println(" VFI starts.... ")
     # VFI
     maxDiff = 10.0
     tol = 1.0e-6
-    global iteration = 0
+    iteration = 0
     global vMaxDiff = Float64[]
 
     while(maxDiff > tol && iteration<maxiter)
 
-        #itp = interpolate((vGridK, vGridZ, vGridA), tVF, Gridded(Linear()))
-        #tVFInterpol = itp(vGridK, vGridZ,vGridA)
+        itp = interpolate((vGridK, vGridZ, vGridA), tVF, Gridded(Linear()))
+        tVFInterpol = itp(vGridK, vGridZ,vGridA)
 
-        #ACCELERATOR, do max only once every ten
-        if(mod(iteration,10)==0 || iteration == 1)
-            #do max step only once every ten times:
-            for iA in 1:nA
-                for iZ in 1:nZ
-                    for iK in 1:nK
-                        for iKNext in 1:nK
-                            #get expected value:
-                            expected = 0.0
-                            for iAnext in 1:nA
-                                for iZnext in 1:nZ
-                                    expected = expected + mTranstnZ[iZ, iZnext] * mTranstnA[iA, iAnext] * tVF[iKNext,iZnext,iAnext]
-                                end
-                            end #for iAnext
+        for iA in 1:nA
+            for iZ in 1:nZ
+                for iK in 1:nK
+                    for iKNext in 1:nK
 
-                            eZ = exp(vGridZ[iZ])
-                            L1solved = ml1[iK,iKNext,iZ,iA]#vGridK[iK]^(1-α)
-                            L2solved = ml2[iK,iKNext,iZ,iA]#vGridK[iK]^(1-α)
-                            vProvisional[iKNext] = val_provisional(vGridK[iK], vGridK[iKNext], vGridZ[iZ],vGridA[iA],L1solved, L2solved, expected, economy)
-                        end #for iKNext
-
-                        tVFNew[iK, iZ, iA], tPolicyFnIndx[iK, iZ, iA] = findmax(vProvisional)
-                    end #for iK
-                end # for iZ
-            end  #end of for iA and fors...
-
-        else
-            #Do accelerator step, just update VF
-            for iA in 1:nA
-                for iZ in 1:nZ
-                    for iK in 1:nK
-
-
-                        iKnextOptimal = tPolicyFnIndx[iK, iZ, iA] #found previously
-                        kNxt = vGridK[iKnextOptimal]
                         #get expected value:
-                        expectedVal = 0.0
+                        expected = 0.0
                         for iAnext in 1:nA
                             for iZnext in 1:nZ
-                                expectedVal = expectedVal + mTranstnZ[iZ, iZnext] * mTranstnA[iA, iAnext] * tVF[iKnextOptimal,iZnext,iAnext]
+                                expected = expected + mTranstnZ[iZ, iZnext] * mTranstnA[iA, iAnext] * tVF[iKNext,iZnext,iAnext]
                             end
-                        end #for iAnext
-
-                        l1 = ml1[iK,iKnextOptimal,iZ,iA]#vGridK[iK]^(1-α)
-                        l2 = ml2[iK,iKnextOptimal,iZ,iA]#vGridK[iK]^(1-α)
-
-                        eZ = exp(vGridZ[iZ])
-                        kNow = vGridK[iK]
-                        c1 = eZ*kNow^α * l1^(1-α) + (1-δ) * kNow - kNxt
-                        c2 = vGridA[iA] * l2
-                        if c1 < 0 || c2 < 0
-                            valueProvisional = -100000
-                        else
-                            util = c1^θ*c2^(1-θ) - 0.5*(l1+l2)^2
-                            valueProvisionalV = (1-β)*util + β*expectedVal
                         end
 
-                        tVFNew[iK, iZ, iA],  = valueProvisionalV
+                        eZ = exp(vGridZ[iZ])
+                        #vProvisionalValues[iCapitalNext] = val_provisional(vGridCapital[iCapital], vGridCapital[iCapitalNext], vGridZ[iZ],vGridA[iA], expected, economy)
+                        L1solved = ml1[iK,iKNext,iZ,iA]#vGridK[iK]^(1-α)
+                        L2solved = ml2[iK,iKNext,iZ,iA]#vGridK[iK]^(1-α)
+                        vProvisional[iKNext] = val_provisional(vGridK[iK], vGridK[iKNext], vGridZ[iZ],vGridA[iA],L1solved, L2solved, expected, economy)
+                        #ml1[iK,iKNext,iZ,iA] = l1
+                        #ml2[iK,iKNext,iZ,iA] = l2
+                        #guessL1 = l1
+                        #guessL2 = l2
 
-                    end #for iK
-                end # for iZ
-            end  #end of for iA and fors...
-        end #end of if (for accelerator comparison)
+                    end
+                    tVFNew[iK, iZ, iA], tPolicyFnIndx[iK, iZ, iA] = findmax(vProvisional)
+                end
+            end
+        end  #end of fors...
 
         maxDiff = norm(tVFNew-tVF)
         vMaxDiff = push!(vMaxDiff,maxDiff)
         tVF, tVFNew = tVFNew, tVF
 
         iteration = iteration+1
-        # if(mod(iteration,10)==0 || iteration == 1)
-        #     println(" Iteration = ", iteration, " Sup Diff = ", maxDiff)
-        # end #end of if for the println(iteraton and sup diff)
+        if(mod(iteration,10)==0 || iteration == 1)
+            println(" Iteration = ", iteration, " Sup Diff = ", maxDiff)
+        end #end of if
     end  #end of while()
-    println("Accelerator finished")
-    println(" Number of Iterations = ", iteration, " Sup Diff = ", maxDiff)
+
     tPolicyFn = vGridK[tPolicyFnIndx]
     return tVF, tPolicyFn, vGridK, vMaxDiff
+    if dosave ==1
+        @save namsave
+    end
 end
 
 end

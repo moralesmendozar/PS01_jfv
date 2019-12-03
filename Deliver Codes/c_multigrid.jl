@@ -1,11 +1,11 @@
-module ex3c
-export c_multigrid_enhanced
+module ex03c
+export c_multigrid
 using Parameters, LinearAlgebra, Interpolations, JLD2, NLsolve
 
 include("gridNum.jl")
 using .ex7aux
 
-function c_multigrid_enhanced(economy, steadyStateValues, nMidPoints::Array)
+function c_multigrid(economy, steadyStateValues, nMidPoints::Array)
     # 0. Get (unpack) the parameters back
     @unpack vGridZ, vGridA,mTranstnZ,mTranstnA, mTranstnZA,α,β,δ,θ,maxiter = economy
     @unpack kss, l1ss, l2ss, utilitySS = steadyStateValues
@@ -75,7 +75,6 @@ function c_multigrid_enhanced(economy, steadyStateValues, nMidPoints::Array)
     # Multigrid scheme calculation... :)
     println(" Multigrid starts ;).... ")
     tol = 1.0e-6
-    global iteration = 0
 
     for iGrid in 1:length(nMidPoints)
 
@@ -106,29 +105,22 @@ function c_multigrid_enhanced(economy, steadyStateValues, nMidPoints::Array)
         guessL1 = l1ss
         guessL2 = l2ss
 
+
+
+
+
         # IMPROVE THE MATRIX FOR LABOR CALCULATION, ENHANCE...
         println("Finding labour choice matrices for all k,kprime' ... ")
         println(" ")
         for iA in 1:nA
             for iZ in 1:nZ
-                #reset l1prev and l2prev
-                l1prev = -10
-                l2prev = -10
                 for iK in 1:nK
-                    #do right triangle
-                    for iKNext in iK:nK
+                    for iKNext in 1:nK
 
                         # Optimal labor choices
                         keyLabor = (vGridK[iK], vGridK[iKNext], vGridZ[iZ],vGridA[iA])
                         if keyLabor ∈ keys(dicLabor)
                             l1, l2 = dicLabor[keyLabor]
-
-                        elseif l1prev == l1ss
-                            l1 = l1ss
-                            l2 = l2ss
-                            keyLabor = (vGridK[iK], vGridK[iKNext], vGridZ[iZ],vGridA[iA])
-                            dicLabor[keyLabor] = [l1, l2]
-
                         else
 
                             l1, l2 = try
@@ -139,55 +131,20 @@ function c_multigrid_enhanced(economy, steadyStateValues, nMidPoints::Array)
 
                             # store in dictionary
                             keyLabor = (vGridK[iK], vGridK[iKNext], vGridZ[iZ],vGridA[iA])
+
                             dicLabor[keyLabor] = [l1, l2]
                         end #catch key_labor
-
-                        l1prev = l1
                         d4ProvisionalLaborOne[iK,iKNext,iZ,iA] = l1
                         d4ProvisionalLaborTwo[iK,iKNext,iZ,iA] = l2
 
-                    end #for iKNext in iK:nK
-                    #do left triangle
-                    if iK>=2
-                        for iKNext in iK-1:-1:1
-
-                            # Optimal labor choices
-                            keyLabor = (vGridK[iK], vGridK[iKNext], vGridZ[iZ],vGridA[iA])
-                            if keyLabor ∈ keys(dicLabor)
-                                l1, l2 = dicLabor[keyLabor]
-
-                            elseif l2prev == l2ss
-                                l1 = l1ss
-                                l2 = l2ss
-                                keyLabor = (vGridK[iK], vGridK[iKNext], vGridZ[iZ],vGridA[iA])
-                                dicLabor[keyLabor] = [l1, l2]
-
-                            else
-
-                                l1, l2 = try
-                                    labour_choice(vGridK[iK], vGridK[iKNext], vGridZ[iZ],vGridA[iA], guessL1, guessL2,α,β,δ,θ,eZ)
-                                catch
-                                    guessL1, guessL2
-                                end
-
-                                # store in dictionary
-                                keyLabor = (vGridK[iK], vGridK[iKNext], vGridZ[iZ],vGridA[iA])
-                                dicLabor[keyLabor] = [l1, l2]
-                            end #catch key_labor
-
-                            l2prev = l2
-                            d4ProvisionalLaborOne[iK,iKNext,iZ,iA] = l1
-                            d4ProvisionalLaborTwo[iK,iKNext,iZ,iA] = l2
-
-                        end #for iKNext in iK:nK
-                    end
+                    end #for iKNext in 1:nK
                 end  #for iK in 1:nK
             end  #for iZ in 1:nZ
         end  #for iA in 1:nA
 
         # ----------------------------------------------------------------------
         # VFI (computed each multigridIteration)
-        global maxDiff = 1.0
+        maxDiff = 1.0
         iteration = 0
 
         println("VFI ...")
@@ -263,17 +220,11 @@ function c_multigrid_enhanced(economy, steadyStateValues, nMidPoints::Array)
             tVF, tVFNew = tVFNew, tVF
 
             iteration = iteration+1
-            # if(mod(iteration,10)==0 || iteration == 1)
-            #     println(" Iteration = ", iteration, " Sup Diff = ", maxDiff)
-            # end #if
+            if(mod(iteration,10)==0 || iteration == 1)
+                println(" Iteration = ", iteration, " Sup Diff = ", maxDiff)
+            end #if
         end #while VFI
-
-        println("Multigrid for grid number $iGrid finished solving")
-        println(" Number of Iterations = ", iteration, " Sup Diff = ", maxDiff)
     end  #for multigrid...
-
-    println("Multigrid finished")
-    println(" Number of Iterations = ", iteration, " Sup Diff = ", maxDiff)
 
     tPolicyFn = vGridK[tPolicyFnIndx]
     #tPolicyFn = tPolicyFnIndx

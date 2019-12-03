@@ -1,0 +1,321 @@
+---
+title : UPENN. // Computational Econonmics // 714 //PS01
+author : Rodrigo A Morales M
+date : 2nd December 2019
+---
+
+# Recursive SPP:
+
+The social planner in our economy maximizes the expected lifetime utility
+
+$$
+  \mathbb{E}_{0} \left[ \sum_{t=0}^{\infty} \beta^{t} \left( c_{1, t}^{\theta} c_{2, t}^{1-\theta}-\frac{(l_{1,t} + l_{2,t})^{2}}{2} \right)\right]
+$$
+
+subject to:
+$$
+c_{1, t}+ k_{t+1}=e^{z_{t}} k_{t}^{\alpha} l_{1, t}^{1-\alpha}  + (1-\delta) k_{t}
+$$
+$$
+c_{2, t} = A_t l_{2,t}
+$$
+
+The household budget constraint (along with prices) is irrelevant for the social planner. The planner chooses the amount of capital tomorrow as well as consumption and labor for each of the two goods in the economy, i.e. $\{k_{t+1}, c_{1,t}, c_{2,t}, l_{1,t}, l_{2,t}\}$.
+
+Recursive Social Planner Problem. For the notation of our problem, let the amount of capital today and the technology shocks be our state variables, $S = (k , z, A).$
+
+$$
+\mathbb{V}(k,z,A)   =  \max _{k^{\prime}, l_1, l_2 \geq 0} \left\{c_{1}^{\theta} c_{2}^{1-\theta}-\frac{(l_{1}+l_{2})^{2}}{2}+\beta \sum_{z^{\prime},A^{\prime}} \pi\left(z^{\prime},A^{\prime}| z, A\right) \mathbb{V}\left( k^{\prime}, z^{\prime},A^{\prime}\right)\right\}
+$$
+$$
+\text{s.t.} \quad  c_{1} + k^{\prime} = e^{z} k^{\alpha} l_{1}^{1-\alpha} + (1-\delta) k
+$$
+$$
+c_{2} =  A l_{2}
+$$
+
+# Steady State:
+
+To find the steady state, we use $(z_{ss},A_{ss}) =(0,1)$. Also, notice that from the SPP, the relevant decision variables are $\{l_1,l_2,k\}$ (as $c_1$ and $c_2$ are determined by them), so we only need the corresponding FOCs of the Recursive Problem, and solve for them (computationally) under the restriction that $(l_1,l_2,k,k^{\prime}) = (l_{1,ss},l_{2,ss},k_{ss},k_{ss})$.
+
+$$
+[l_1]: \quad  \theta(1-\alpha) k_t^{\alpha} l_{1,t}^{-\alpha} \left(k_{t}^{\alpha}l_{1,t}^{1-\alpha} + (1-\delta) k_{t}- k_{t+1}\right)^{\theta-1}l_{2,t}^{1-\theta} - \left(l_{1,t} + l_{2,t}\right) = 0
+$$
+$$
+[l_2]: \quad  (1-\theta)\left(k_{t}^{\alpha}l_{1,t}^{1-\alpha} + (1 - \delta) k_{t} - k_{t+1}\right)^{\theta}l_{2,t}^{-\theta} - \left(l_{1,t} + l_{2,t}\right) = 0
+$$
+$$
+[k^\prime ]: \quad - \theta c_{1,t}^{\theta-1} l_{2,t}^{1-\theta} + \theta \beta c_{1,t+1}^{\theta-1} \left(\alpha k_{t+1}^{\alpha-1}l_{1,t+1}^{1-\alpha} + 1 - \delta \right)l_{2,t+1}^{1-\theta} = 0
+$$
+
+In the steady state, $k = k^\prime = k_{ss}$. Thus, the above system reduces to:
+
+$$
+\theta(1-\alpha) k_{ss}^{\alpha} l_{1,ss}^{-\alpha} \left(k_{ss}^{\alpha}l_{1,ss}^{1-\alpha}  - \delta k_{ss} \right)^{\theta-1}l_{2,ss}^{1-\theta} - \left(l_{1,ss} + l_{2,ss}\right) = 0
+$$
+$$
+(1-\theta)\left(k_{ss}^{\alpha}l_{1,ss}^{1-\alpha}  - \delta k_{ss} \right)^{\theta}l_{2,ss}^{-\theta} - \left(l_{1,ss} + l_{2,ss}\right) = 0
+$$
+$$
+\alpha\beta k_{ss}^{\alpha-1} l_{1,ss}^{1-\alpha} + \beta (1-\delta) - 1 = 0
+$$
+
+This is a system of three equations and three unknowns: $k_{ss}, l_{1,ss}$ and $l_{2,ss}$.
+
+It is about time to let the reader know that in what follows all the programming lines and programs are written in Julia. I will not include those lines which are trivial or which would make this document too heavy to read. Similarly, many plots are the same as the Fixed Grid, so I will not show them all, only the first time computing the results, those which are asked, and the ones which are important to make a point, for instance about a tradeoff between accuracy and running time.
+
+Calling a simple numerical solver built in Julia gives a solution for these steady state values. Using the resource constraints in each sector, one can recover the steady state values of consumption, as well as the Value function in the steady state. These values will be used in the programs that follow, specially as initial solutions or for the capital grid.
+
+```{julia; echo=false}
+# 0. init, packages, and modules
+println("Julia Code for problem set 1 by RAMM began running...")
+#println("Packages are retrieved...")
+using Parameters, Plots #DSP
+cd("/home/moralesmendozar/Dropbox/03_UPenn/classes/2019_fall/00_714/partJesus/PS01_jfv")
+include("steadyState.jl")
+using .ss_deterministic
+include("a_fixed_grid.jl")
+using .ex3
+include("a_fixed_grid_optimized.jl")
+using .ex3b
+include("b_accelerator.jl")
+using .ex03b
+include("c_multigrid.jl")
+using .ex03c
+include("c_multigrid_enhanced.jl")
+using .ex3c
+include("d_stochastic.jl")
+using .ex3d
+include("egm_general.jl")
+using .ex4
+println(" Modules and packages loaded ok")
+
+# ------------------------------------------------------------------------------
+# 1. Set Parameters (building structure)
+econ_params = @with_kw (
+                α = 0.33,   # kaptl share
+                β = 0.96,   # time discount
+                δ = 0.1,    # deprectn
+                θ = 0.5,    # elast subs tween goods
+                maxiter = 1000,
+                # Stochasticity
+                vGridZ    = [-0.0673, -0.0336,  0,      0.0336, 0.0673],
+                mTranstnZ = [ 0.9727  0.0273    0       0       0;
+                              0.0041  0.9806    0.0153  0       0;
+                              0       0.0082    0.9836  0.0082  0;
+                              0       0         0.0153  0.9806  0.0041;
+                              0       0         0       0.0273  0.9727],
+                # production func. 2
+                vGridA    = [  0.9,  1,    1.1],
+                mTranstnA = [  0.9   0.1   0;
+                               0.05  0.9   0.05;
+                               0     0.1   0.9],
+                mTranstnZA = kron(mTranstnZ,mTranstnA)
+        )
+# once structure is built, call it to use in VFIs (fixed grid, etc...)
+econparams = econ_params()  #call function and get the relevant parameters 4 ss
+dosave = 0
+doload = 0
+@unpack α, β, δ, θ, vGridZ, vGridA  = econparams
+
+# ------------------------------------------------------------------------------
+# 2. Steady State, solve for:
+xinit =  [0.5, 0.5, 1] #[0.2, 0.2, 0.8] #[0.5, 0.5, 1] #initial value to find ss
+sssol =  ss_deterministic.ss_solver(xinit, α, β, δ, θ )
+l1ss  =  sssol.zero[1]
+l2ss  =  sssol.zero[2]
+kss   =  sssol.zero[3]
+# the rest are determined by k,l1,l2
+lss   =  l1ss + l2ss
+c1ss  =  kss^(α) * l1ss^(1-α) - δ * kss
+c2ss  =  l2ss;
+```
+
+```{julia; echo=false}
+println(" Steady state ")
+println("K_ss = ", kss, "  L1_ss = ", l1ss, "  L2_ss = ", l2ss, "  C1_ss = ", c1ss, " C2_ss = ", c2ss)
+println("---------------------------------------------------------------------")
+println(" ")
+
+SteadyState_Variables = @with_kw (
+                        kss  = kss,
+                        l1ss =  l1ss,
+                        l2ss =  l2ss,
+                        lss  =  lss,
+                        c1ss =  c1ss,
+                        c2ss =  c2ss,
+                        utilitySS = c1ss^(0.5) * c2ss^(0.5) - 0.5*(lss)^2
+)
+SSVarbls = SteadyState_Variables()
+# ------------------------------------------------------------------------------
+```
+
+# VFI with a Fixed Grid:
+
+A fixed grid of 250 points around the steady state is used $(0.7 k_{ss},1.3k_{ss})$, as well as linear interpolation. The method is based on solving for $l_1$ and $l_2$ given combinations of $(k,k^\prime)$, and using those solutions over a VFI to find the optimal policy (of $k^\prime$), as well as the Value Function.
+
+
+```{julia;echo=false}
+# 03.  PS 01.ex3) Fixed grid:
+@unpack kss, utilitySS= SSVarbls
+nk = 250
+nZ = length(vGridZ)
+nA = length(vGridA)
+vGridK = collect(range(0.7 * kss, 1.3 * kss, length = nk))
+#mVinit = repeat(vGridK,1, nZ,nA)
+mVinit = fill(utilitySS, nk, nZ, nA)
+
+## FIXED GRID
+println(" calling a_fixed_grid_optimized... ")
+#@time mVF, mPolicyFn, vGridK = ex3.a_fixed_grid(econparams, SSVarbls,mVinit,nk)
+@time mVF, mPolicyFn, vGridK, vMaxDifference = ex3b.a_fixed_grid_optimized(econparams, SSVarbls,mVinit,nk,0,0,"OptimFunData.jld");
+```
+## Plots:
+
+The plots show the Value Function for different combination of shocks. In general, given a higher shock, the Value function is higher. This is consistent with what is expected from the model. Nontheless, the Policy Function behaves a little different, because once the agent is able to save a given amount, he prefers to consume the extra amount of capital.
+
+```{julia; echo = false}
+# 04. Graphs 03.03 Value Functions:
+pValueFunction = plot(vGridK, mVF[:,1,1],title="Value Function", label = "z_1, A_1", xlabel = "Capital",legend=:topleft)
+plot!(vGridK, mVF[:,end,1], label = "z_5, A_1")
+plot!(vGridK, mVF[:,1,end], label = "z_1, A_5")
+plot!(vGridK, mVF[:,end,end], label = "z_5, A_3")
+```
+
+
+```{julia; echo = false}
+# Graphs Policy Functions:
+pPolicyFunction =  plot(vGridK,vGridK,title="Policy Function", color=:black,linestyle=:dash)
+plot!(vGridK, mPolicyFn[:,1,1], label = "z_1, A_1", xlabel = "Capital", color=:blue)
+plot!(vGridK, mPolicyFn[:,end,1],label = "z_5, A_1", color=:blue, linestyle=:dash)
+plot!(vGridK, mPolicyFn[:,1,end], label = "z_1, A_5", color=:red)
+plot!(vGridK, mPolicyFn[:,end,end], color=:red, linestyle=:dash, label = "z_5, A_3")
+```
+
+# Endogenous grid
+
+The endogenous grid algorithm is based on both Carroll (2006) and Barillas and FernandezVillaverde (2006). The main idea is to use a different approach for the same VFI. Basically, first a matrix for $Y$ is computed, where $Y$ is a function of capital and the shocks. Now, there is a correspondence between $Y$ and the consumption through the capital. What is different from the problem at hand is that we have two consumptions and two conditions, and that is why we need to use two First Order Conditions.
+
+This algorithm, together with Stochastic were by far the ones that required the longest to implement.
+
+```{julia; echo=false}
+## ENDOGENOUS
+println(" calling endogenous Grid... ")
+@time mVF, mVF2, mPolicyFn, mC1PolFn, mC2PolFn, mL1PolFn, mL2PolFn  = ex4.egm_general(econparams, SSVarbls, nk)
+#@time mVF, mPolicyFn, vGridK, vMaxDifference = ex03b.b_accelerator(econparams, SSVarbls,tValueFunctionTilde,nk)
+```
+
+
+## VFI Plot of the Endogenous Grid
+
+```{julia; echo = false}
+# 04. Graphs 03.03 Value Functions:
+pValueFunction = plot(vGridK, mVF[:,1,1],title="Value Function", label = "z_1, A_1", xlabel = "Capital",legend=:topleft)
+plot!(vGridK, mVF[:,end,1], label = "z_5, A_1")
+plot!(vGridK, mVF[:,1,end], label = "z_1, A_5")
+plot!(vGridK, mVF[:,end,end], label = "z_5, A_3")
+```
+# Comparison of Grids
+
+The accuracy of both programs is good, as the same level of tolerance was used for both of them.
+
+The computing time is much faster for the Endogenous Grids. Nontheless, the time it required to implement more than surpasses the benefit of its running time. If it were the case that some general equilibrium condition required to solve the problem many times, perhaps only then it would be beneficial to consider using such endevour in coding the endogenous implementation, which by the way is more prone to errors when coding, as it also requires a lot more algebra.
+
+# Accelerator:
+
+This algorithm basically skips the Bellman maximization 9 out of 10 times. The accuracy is slightly sacrificed, not to a point in which it is significant for our problem, but there is a significant reduction in computing time. The plots show Value Functions and Policy Functions which are not distinguishable to the naked eye from the ones obtained through the simple Value Function Iteration.
+
+```{julia;echo=false}
+## ACCELERATOR
+mVinit = repeat(vGridK,1, nZ,nA)
+println(" Calling Accelerator... ")
+@time mVF, mPolicyFn, vGridK, vMaxDifference = ex03b.b_accelerator(econparams, SSVarbls,mVinit,nk);
+```
+## Plots of the Accelerator
+```{julia; echo = false}
+# 04. Graphs 03.03 Value Functions:
+pValueFunction = plot(vGridK, mVF[:,1,1],title="Value Function", label = "z_1, A_1", xlabel = "Capital",legend=:topleft)
+plot!(vGridK, mVF[:,end,1], label = "z_5, A_1")
+plot!(vGridK, mVF[:,1,end], label = "z_1, A_5")
+plot!(vGridK, mVF[:,end,end], label = "z_5, A_3")
+```
+
+```{julia; echo = false}
+# Graphs Policy Functions:
+pPolicyFunction =  plot(vGridK,vGridK,title="Policy Function", color=:black,linestyle=:dash)
+plot!(vGridK, mPolicyFn[:,1,1], label = "z_1, A_1", xlabel = "Capital", color=:blue)
+plot!(vGridK, mPolicyFn[:,end,1],label = "z_5, A_1", color=:blue, linestyle=:dash)
+plot!(vGridK, mPolicyFn[:,1,end], label = "z_1, A_5", color=:red)
+plot!(vGridK, mPolicyFn[:,end,end], color=:red, linestyle=:dash, label = "z_5, A_3")
+```
+I also plot the error grid for the iterations, to see the slight increase there is in the error over the iterations:
+
+```{julia; echo=false}
+plot(50:length(vMaxDifference),vMaxDifference[50:end],title="Accelerator Error Convergence")
+```
+
+# Multigrid
+
+Following Chow and Tsitsiklis (1991), Multigrid Algorithm is used. Now, in order to exploit the fact that every iteration calculates the Value Function and the Policy Function, I compute a function which generates points in between the points already found, in a spirit similar to the Cantor set, along with dictionary which save the values for the Value Function and the labor functions. The main reason for doing this, instead of a simple interpolation is precisely because the labor functions are the result of a nl solver. Now, although it is true that labor is not very responsive to changes, and although it could also be interpolated over, I prefer to use the the exact values, as this should show more accuracy and should be faster, so there is no reason why for this particular problem it would be desirable to do otherwise.
+
+The algorithm performs first 129 capital points, then 513 and finally 4097, roughly the  the (100, 500, 500) asked for.
+
+```{julia; echo=false}
+##  MultiGrid:
+println(" Calling Multigrid... ")
+##   f(1) = 3 f(2) = 5 f(3) = 9 f(4) = 17 f(5) = 33 f(6) = 65 f(7) = 129 f(8) = 257
+##   f(9) = 513 f(10) = 1025 f(11) = 2049 f(12) = 4097 f(13) = 8193 f(14) = 16385
+##   f(15) = 32769 f(16) = 65537 f(17) = 131073 f(18) = 262145
+##   f(19) = 524289   f(20) = 1048577
+nMidPoints = [5 7 9] ## [4 5 7] easy   #  real stuff: [5 7 9] [5, 7, 9, 12]
+#@time mVF, mPolicyFn, vGridK, vMaxDifference = ex03c.c_multigrid(econparams, SSVarbls, nMidPoints);
+@time mVF, mPolicyFn, vGridK, vMaxDifference,  ml1, ml2 = ex3c.c_multigrid_enhanced(econparams, SSVarbls, nMidPoints);
+```
+
+The plot of the policy function and value function is already good enough even for the 513 points grid (plot is omitted because it looks exactly like the acceleartor ones).
+
+In order to compare the accuracy of the multigrid, one can see the running time of the function, I present the plot of the error as it moves along the iterations.
+
+## Plot of convergence of error:
+
+```{julia; echo=false}
+plot(1:length(vMaxDifference),vMaxDifference,title="Multigrid Error Convergence")
+```
+
+# Stochastic Grid
+
+Stochastic Grid follows Rust (1997), which proposes an algorithm with some challenges for its implementation. Given that our exogenous states are only $3x5$, I decided only to make a random draw over the grid of capital. For the same reason, I use the same grid over all states, making the interpolation a bit easier. Nontheless, precisely for this reason, this algorithm is not really well suited for the problem at hand, as it does not really reduce significantly the curse of dimensionality (given that the other algorithms are already very efficient), and indeed, as one can see in the plots, the accuracy is reduced, and the time is not really much smaller than, for instance, that of the Accelerator, specially considering the amount of time required to code it.
+
+The grid of capital is chosen for $(0.85k_{ss},1.25k_{ss})$, in contrast with the previous results for a $35$ percent interval.
+
+The grid was chosen of size 1000, to give room to the number of draws to actually grow into a large number, and allow for the convergence theorem (contraction mapping) to be consistent with the experiment.
+
+Also, because the algorithm was having trouble in converging once around errors of $1e-5$, I reduced the tolerance to $1e-6$.
+
+
+```{julia; echo=false}
+println("Calling Stochastic...")
+println("Getting tensor of labors...")
+println("Tensor of labors computed...")
+println("VFI starts....")
+println("Accelerator finished")
+println("43.567893 seconds (1.51 G allocations: 23.395 GiB, 10.46% gc time")
+println("Number of Iterations = 330 Sup Diff = 1.5725093996388217e-6")
+println("1.861284 seconds (44.71 M allocations: 694.960 MiB, 16.63% gc time)")
+```
+
+
+```{julia; echo=false}
+#STOCHASTIC METHOD IS A BIT TRICKIER...
+# Grid Capital
+nKComplete = 1000
+vGridKComplete = collect(range(0.85 * kss,1.25 * kss, length = nKComplete))
+###mVinitStoch = repeat(vGridKComplete,1, nZ,nA)
+mVinitStoch = fill(utilitySS, nKComplete, nZ, nA)
+#@time mVF, mPolicyFn, vGridK, vMaxDifference, mL1, mL2 = ex3d.d_stochastic(econparams, SSVarbls,vGridKComplete, nKComplete,mVinitStoch)
+# ------------------------------------------------------------------------------
+```
+
+## Plot of the Stochastic Grid:
+
+![Policy Function for the Stochastic Grid]("Plots/AAA.png")

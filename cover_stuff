@@ -1,0 +1,23 @@
+
+
+```{julia; echo=false}
+##  MultiGrid:
+println(" Calling Multigrid... ")
+##   f(1) = 3 f(2) = 5 f(3) = 9 f(4) = 17 f(5) = 33 f(6) = 65 f(7) = 129 f(8) = 257
+##   f(9) = 513 f(10) = 1025 f(11) = 2049 f(12) = 4097 f(13) = 8193 f(14) = 16385
+##   f(15) = 32769 f(16) = 65537 f(17) = 131073 f(18) = 262145
+##   f(19) = 524289   f(20) = 1048577
+nMidPoints = [5 7 9] ## [4 5 7] easy   #  real stuff: [5 7 9] [5, 7, 9, 12]
+#@time mVF, mPolicyFn, vGridK, vMaxDifference = ex03c.c_multigrid(econparams, SSVarbls, nMidPoints);
+@time mVF, mPolicyFn, vGridK, vMaxDifference,  ml1, ml2 = ex3c.c_multigrid_enhanced(econparams, SSVarbls, nMidPoints);
+```
+
+en lugar de lo anterior poner lo siguiente
+
+
+######################################################3
+
+
+```{julia; echo=false}
+plot(1:length(vMaxDifference),vMaxDifference,title="Multigrid Error Convergence")
+```

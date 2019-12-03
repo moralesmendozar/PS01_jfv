@@ -71,6 +71,43 @@ Now, we can formulate the social planner problem recursively. First, let the amo
  \end{split}
 \end{align}
 
+
+
+
+subject to:
+$$
+c_{1, t}+ k_{t+1}&=e^{z_{t}} k_{t}^{\alpha} l_{1, t}^{1-\alpha}  + (1-\delta) k_{t}
+$$
+
+$$
+c_{2, t} &= A_t l_{2,t}
+$$
+
+$$
+l_{t} &= l_{1,t} + l_{2,t}
+$$
+
+Note that the household budget constraint is irrelevant for the social planner. In particular, the planner chooses the amount of capital tomorrow as well as consumption and labor for each of the two goods in the economy, i.e. $\{k_{t+1}, c_{1,t}, c_{2,t}, l_{1,t}, l_{2,t}\}$.
+
+
+
+$$
+V(k,z,A)   =  \max _{k^{\prime}, l_1, l_2 \geq 0}&\left\{c_{1}^{\theta} c_{2}^{1-\theta}-\frac{(l_{1}+l_{2})^{2}}{2}+\beta\sum_{z^{\prime}} \sum_{A^{\prime}}\pi\left(z^{\prime}| z\right) \pi\left(A^{\prime} | A\right) \mathbb{V}\left( k^{\prime}, z^{\prime},A^{\prime}\right)\right\}
+$$
+$$
+\text{s.t.} \quad  c_{1} + k^{\prime} = e^{z} k^{\alpha} l_{1}^{1-\alpha} + (1-\delta) k
+$$
+$$
+c_{2} & = & A l_{2}
+$$
+
+\begin{eqnarray*}
+\mathbb{V}(k,z,A)  & = & \max _{k^{\prime}, l_1, l_2 \geq 0}&\left\{c_{1}^{\theta} c_{2}^{1-\theta}-\frac{(l_{1}+l_{2})^{2}}{2}+\beta\sum_{z^{\prime}} \sum_{A^{\prime}}\pi\left(z^{\prime}| z\right) \pi\left(A^{\prime} | A\right) \mathbb{V}\left( k^{\prime}, z^{\prime},A^{\prime}\right)\right\} \\
+\text{s.t.} \quad & c_{1} + k^{\prime} &=& e^{z} k^{\alpha} l_{1}^{1-\alpha} + (1-\delta) k  \\
+ & c_{2} & = & A l_{2}
+\end{eqnarray*}
+
+
 -----------------------------------------------------------------------------------
 2
 
@@ -85,6 +122,11 @@ Assume that $z_{ss} = 0 $ and $ A_{ss} = 1 $. Then, the planner will solve the f
 c_{1, t}+ k_{t+1}= k_{t}^{\alpha} l_{1, t}^{1-\alpha}  + (1-\delta) k_{t} \\
 & c_{2, t} =  l_{2,t}
 \end{align}
+
+
+
+
+
 F.O.C.
 \begin{align}
 (l_1): \quad  & \theta(1-\alpha) k_t^{\alpha} l_{1,t}^{-\alpha} \left(k_{t}^{\alpha}l_{1,t}^{1-\alpha} + (1-\delta) k_{t}- k_{t+1}\right)^{\theta-1}l_{2,t}^{1-\theta} - \left(l_{1,t} + l_{2,t}\right) = 0
@@ -231,3 +273,20 @@ In general, this method will allow us to gain accuracy in the solution since now
 8
 \section{Stochastic grid}
 \end{document}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#![]("Plots/003_ValueFunction_d_stochastic_20191201.png")
+
+#![]("Plots/003_PolicyFunction_d_stochastic_20191201.png")
